@@ -43,7 +43,7 @@ const validateAddress = [
 ];
 
 // Create a new address for the authenticated user
-addressRouter.post('/', verifyToken, validateAddress, async (req, res) => {
+addressRouter.post('/', validateAddress, verifyToken, async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -68,7 +68,7 @@ addressRouter.post('/', verifyToken, validateAddress, async (req, res) => {
 });
 
 // Update an address for the authenticated user
-addressRouter.patch('/:id', verifyToken, validateAddress, async (req, res) => {
+addressRouter.patch('/:id', validateAddress, verifyToken, async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });

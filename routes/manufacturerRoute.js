@@ -20,6 +20,7 @@ async function createSlug(text) {
     return uniqueSlug;
 }
 
+
 // Validation middleware for manufacturer operations
 const validateManufacturer = [
     body('name').notEmpty().withMessage('Name is required'),
@@ -27,7 +28,7 @@ const validateManufacturer = [
 ];
 
 // Create a new manufacturer
-manufacturerRouter.post('/', verifyToken, validateManufacturer, async (req, res) => {
+manufacturerRouter.post('/', validateManufacturer, verifyToken, async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -49,8 +50,9 @@ manufacturerRouter.post('/', verifyToken, validateManufacturer, async (req, res)
     }
 });
 
+
 // Update a manufacturer
-manufacturerRouter.patch('/:id', verifyToken, validateManufacturer, async (req, res) => {
+manufacturerRouter.patch('/:id', validateManufacturer, verifyToken, async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -74,6 +76,7 @@ manufacturerRouter.patch('/:id', verifyToken, validateManufacturer, async (req, 
     }
 });
 
+
 // Get all manufacturers
 manufacturerRouter.get('/', async (req, res) => {
     try {
@@ -84,6 +87,7 @@ manufacturerRouter.get('/', async (req, res) => {
         res.status(500).json({ msg: 'Internal server error, try again later' });
     }
 });
+
 
 // Get a manufacturer by ID
 manufacturerRouter.get('/:id', async (req, res) => {
@@ -99,6 +103,7 @@ manufacturerRouter.get('/:id', async (req, res) => {
         res.status(500).json({ msg: 'Internal server error, try again later' });
     }
 });
+
 
 // Delete a manufacturer
 manufacturerRouter.delete('/:id', verifyToken, async (req, res) => {
@@ -120,6 +125,7 @@ manufacturerRouter.delete('/:id', verifyToken, async (req, res) => {
         res.status(500).json({ msg: 'Internal server error, try again later' });
     }
 });
+
 
 // Get all products for a specific manufacturer
 manufacturerRouter.get('/:id/product', async (req, res) => {

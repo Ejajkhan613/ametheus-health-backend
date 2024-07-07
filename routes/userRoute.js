@@ -48,6 +48,7 @@ userRouter.get('/', verifyToken, async (req, res) => {
     }
 });
 
+
 const validateRegistration = [
     body('email')
         .isEmail().withMessage('Invalid Email ID')
@@ -375,7 +376,7 @@ const passwordValidation = [
 ];
 
 // Change User Account Password
-userRouter.patch('/change-password', verifyToken, Limiter, passwordValidation, async (req, res) => {
+userRouter.patch('/change-password', Limiter, passwordValidation, verifyToken, async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -528,7 +529,7 @@ const familyValidation = [
 ];
 
 // Add Family Member (without avatar)
-userRouter.post('/family', verifyToken, familyValidation, async (req, res) => {
+userRouter.post('/family', familyValidation, verifyToken, async (req, res) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -587,7 +588,7 @@ const editFamilyValidation = [
 ];
 
 // Edit Family Member
-userRouter.patch('/family/:id', verifyToken, editFamilyValidation, async (req, res) => {
+userRouter.patch('/family/:id', editFamilyValidation, verifyToken, async (req, res) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
