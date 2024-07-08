@@ -130,7 +130,6 @@ userRouter.post('/verify', Limiter, validateOtp, async (req, res) => {
         if (checkAccount) {
             return res.status(400).send({ msg: 'Email is already registered' });
         }
-        console.log(checkEmail, checkAccount);
 
         const uhid = await generateUHID();
 
