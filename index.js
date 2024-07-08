@@ -32,27 +32,27 @@ app.use(rateLimiter);
 // app.use(logger);
 
 // Routes
-app.get('/', async (req, res) => {
+app.get('/ah/', async (req, res) => {
     return res.status(300).send({ 'msg': 'Server is Up' });
 })
 
 // User
-app.use('/api/v1/user', userRouter);
+app.use('/ah/api/v1/user', userRouter);
 
 // User Address
-app.use('/api/v1/address', addressRouter);
+app.use('/ah/api/v1/address', addressRouter);
 
 // Health Records
-// app.use('/api/v1/health-record', healthRecordRouter);
+// app.use('/ah/api/v1/health-record', healthRecordRouter);
 
 // Medicine Manufacturer
-app.use('/api/v1/manufacturer', manufacturerRouter);
+app.use('/ah/api/v1/manufacturer', manufacturerRouter);
 
 // Medicine Category
-app.use('/api/v1/category', cateogryRoute);
+app.use('/ah/api/v1/category', cateogryRoute);
 
 // Medicines
-app.use('/api/v1/product', productRouter);
+app.use('/ah/api/v1/product', productRouter);
 
 
 
