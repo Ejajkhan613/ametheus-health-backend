@@ -1,12 +1,12 @@
 // index.js
 require('dotenv').config();
+const https = require("https");
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const morgan = require('morgan');
 const bodyParser = require('body-parser');
 
-const Port = process.env.PORT || 3000;
 const DBConnection = require('./config/db');
 const { rateLimiter } = require('./middlewares/rateLimiter');
 const logger = require('./middlewares/logger');
@@ -18,6 +18,8 @@ const cateogryRoute = require('./routes/categoryRoute');
 const productRouter = require('./routes/productRoute');
 
 const app = express();
+
+const Port = process.env.PORT || 3900;
 
 // Middleware
 app.use(express.json());
@@ -52,7 +54,19 @@ app.use('/api/v1/category', cateogryRoute);
 app.use('/api/v1/product', productRouter);
 
 
-app.listen(Port, async (req, res) => {
+
+
+// HTTPS Server Configuration
+const privateKey = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/privkey.pem', 'utf8');
+const certificate = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/cert.pem', 'utf8');
+const credentials = { key: privateKey, cert: certificate };
+
+// Starting HTTPS Server
+const httpsServer = https.createServer(credentials, app);
+
+
+
+httpsServer.listen(Port, async () => {
     try {
         await DBConnection;
         console.log(`Connected to DB`);
