@@ -67,10 +67,10 @@ categoryRoute.post('/', [
     }
 
     try {
-        const { name, description, parent } = req.body;
+        const { name, description, parent, metaTitle, metaDescription, metaTags } = req.body;
         const slug = await categorySlugify(name);
         console.log(slug);
-        const category = new Category({ name, description, slug, parent });
+        const category = new Category({ name, description, slug, parent, metaTitle, metaDescription, metaTags });
 
         if (parent) {
             const parentCategory = await Category.findById(parent);
