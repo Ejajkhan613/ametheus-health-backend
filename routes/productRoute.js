@@ -321,7 +321,7 @@ productRouter.delete('/:id', verifyToken, async (req, res) => {
 });
 
 // Route to fetch all products with pagination, filtering, and sorting
-productRouter.get('/', verifyToken, async (req, res) => {
+productRouter.get('/', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
