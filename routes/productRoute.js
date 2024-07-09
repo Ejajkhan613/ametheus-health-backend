@@ -378,7 +378,7 @@ productRouter.get('/', async (req, res) => {
 });
 
 // Route to fetch a single product by ID
-productRouter.get('/:id', verifyToken, async (req, res) => {
+productRouter.get('/:id', async (req, res) => {
     try {
         const product = await ProductModel.findById(req.params.id);
         if (!product) {
