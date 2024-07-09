@@ -41,11 +41,11 @@ const generateKey = (originalname) => {
     return `products/${crypto.randomBytes(16).toString('hex')}${ext}`;
 };
 
-const productRouter = express.Router();
-productRouter.use(fileUpload());
+const productRoute = express.Router();
+productRoute.use(fileUpload());
 
 // Route to upload Excel file and create products
-productRouter.post('/import', verifyToken, async (req, res) => {
+productRoute.post('/import', verifyToken, async (req, res) => {
     if (!req.files || !req.files.file) {
         return res.status(400).send({ msg: 'No file uploaded' });
     }
@@ -140,7 +140,7 @@ productRouter.post('/import', verifyToken, async (req, res) => {
 });
 
 // Route to export products to Excel
-productRouter.get('/export', verifyToken, async (req, res) => {
+productRoute.get('/export', verifyToken, async (req, res) => {
     try {
         const { categoryID, genericID, manufacturerID, originCountry } = req.query;
 
@@ -241,7 +241,7 @@ const productValidationRules = [
 ];
 
 // Route to create a new product
-productRouter.post('/', verifyToken, productValidationRules, async (req, res) => {
+productRoute.post('/', verifyToken, productValidationRules, async (req, res) => {
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -260,7 +260,7 @@ productRouter.post('/', verifyToken, productValidationRules, async (req, res) =>
 });
 
 // Route to update/add images to a product
-productRouter.patch('/:id/images', verifyToken, async (req, res) => {
+productRoute.patch('/:id/images', verifyToken, async (req, res) => {
     try {
         const product = await ProductModel.findById(req.params.id);
         if (!product) {
@@ -300,7 +300,7 @@ productRouter.patch('/:id/images', verifyToken, async (req, res) => {
 });
 
 // Route to delete a product and its images from S3
-productRouter.delete('/:id', verifyToken, async (req, res) => {
+productRoute.delete('/:id', verifyToken, async (req, res) => {
     try {
         const product = await ProductModel.findByIdAndDelete(req.params.id);
         if (!product) {
@@ -321,7 +321,7 @@ productRouter.delete('/:id', verifyToken, async (req, res) => {
 });
 
 // Route to fetch all products with pagination, filtering, and sorting
-productRouter.get('/', async (req, res) => {
+productRoute.get('/', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
@@ -378,7 +378,7 @@ productRouter.get('/', async (req, res) => {
 });
 
 // Route to fetch a single product by ID
-productRouter.get('/:id', async (req, res) => {
+productRoute.get('/:id', async (req, res) => {
     try {
         const product = await ProductModel.findById(req.params.id);
         if (!product) {
@@ -392,7 +392,7 @@ productRouter.get('/:id', async (req, res) => {
 });
 
 // Route to update a product by ID
-productRouter.put('/:id', verifyToken, async (req, res) => {
+productRoute.put('/:id', verifyToken, async (req, res) => {
     try {
         const product = await ProductModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
         if (!product) {
@@ -406,4 +406,4 @@ productRouter.put('/:id', verifyToken, async (req, res) => {
 });
 
 
-module.exports = productRouter;
+module.exports = productRoute;

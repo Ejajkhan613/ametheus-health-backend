@@ -11,17 +11,20 @@ const bodyParser = require('body-parser');
 const DBConnection = require('./config/db');
 const { rateLimiter } = require('./middlewares/rateLimiter');
 const logger = require('./middlewares/logger');
+
 const userRouter = require('./routes/userRoute');
 const addressRouter = require('./routes/userAddressRoute');
 const healthRecordRouter = require('./routes/healthRecordRoute');
 const manufacturerRouter = require('./routes/manufacturerRoute');
 const cateogryRoute = require('./routes/categoryRoute');
 const genericRoute = require('./routes/genericRoute');
-const productRouter = require('./routes/productRoute');
+const productRoute = require('./routes/productRoute');
+const wishlistRoute = require('./routes/wishlistRoute');
+const cartRoute = require('./routes/cartRoute');
 
 const app = express();
 
-const Port = process.env.PORT || 3900;
+const Port = process.env.PORT || 4100;
 
 // Middleware
 app.use(express.json());
@@ -56,7 +59,13 @@ app.use('/ah/api/v1/category', cateogryRoute);
 app.use('/ah/api/v1/generic', genericRoute);
 
 // Medicines
-app.use('/ah/api/v1/product', productRouter);
+app.use('/ah/api/v1/product', productRoute);
+
+// Wishlist
+app.use('/ah/api/v1/wishlist', wishlistRoute);
+
+// Cart
+app.use('/ah/api/v1/cart', cartRoute);
 
 
 
