@@ -13,7 +13,7 @@ async function createSlug(text) {
     let uniqueSlug = slug;
     let count = 0;
 
-    while (await ManufacturerModel.findOne({ slug: uniqueSlug })) {
+    while (await Generic.findOne({ slug: uniqueSlug })) {
         count++;
         uniqueSlug = `${slug}-${count}`;
     }
