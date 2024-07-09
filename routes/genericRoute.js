@@ -1,4 +1,5 @@
 const express = require('express');
+const slugify = require('slugify');
 const { body, validationResult } = require('express-validator');
 const mongoose = require('mongoose');
 
