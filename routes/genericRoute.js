@@ -37,7 +37,7 @@ const validateGeneric = [
 genericRoute.get('/', async (req, res) => {
     try {
         const generics = await Generic.find();
-        return res.status(200).json(generics);
+        return res.status(200).json({ msg: "Success", data: generics });
     } catch (error) {
         console.error('Error fetching generics:', error);
         return res.status(500).json({ msg: 'Internal server error, try again later' });
@@ -55,7 +55,7 @@ genericRoute.get('/:id', async (req, res) => {
 
         // Assuming you have a Product model that references the genericID
         const products = await ProductModel.find({ genericID: id }); // Adjust the query according to your Product model
-        return res.status(200).json({ generic, products });
+        return res.status(200).json({ msg: 'Success', data: generic, products });
     } catch (error) {
         console.error('Error fetching generic:', error);
         return res.status(500).json({ msg: 'Internal server error, try again later' });
