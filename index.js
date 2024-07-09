@@ -16,6 +16,7 @@ const addressRouter = require('./routes/userAddressRoute');
 const healthRecordRouter = require('./routes/healthRecordRoute');
 const manufacturerRouter = require('./routes/manufacturerRoute');
 const cateogryRoute = require('./routes/categoryRoute');
+const genericRoute = require('./routes/genericRoute');
 const productRouter = require('./routes/productRoute');
 
 const app = express();
@@ -50,6 +51,9 @@ app.use('/ah/api/v1/manufacturer', manufacturerRouter);
 
 // Medicine Category
 app.use('/ah/api/v1/category', cateogryRoute);
+
+// Medicine Generic
+app.use('/ah/api/v1/generic', genericRoute);
 
 // Medicines
 app.use('/ah/api/v1/product', productRouter);
