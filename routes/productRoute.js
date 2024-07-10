@@ -250,7 +250,7 @@ productRoute.post('/', verifyToken, productValidationRules, async (req, res) => 
 
     try {
         console.log("yes")
-        req.body.slug = createSlug(req.body.title);
+        req.body.slug = await createSlug(req.body.title);
         const product = new ProductModel(req.body);
         await product.save();
         res.status(201).send({ msg: 'Product created successfully', data: product });
