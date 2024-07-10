@@ -249,7 +249,6 @@ productRoute.post('/', verifyToken, productValidationRules, async (req, res) => 
     }
 
     try {
-        console.log("yes")
         req.body.slug = await createSlug(req.body.title);
         const product = new ProductModel(req.body);
         await product.save();
@@ -409,6 +408,20 @@ productRoute.get('/slug/:slug', async (req, res) => {
 // Route to update a product by ID
 productRoute.put('/:id', verifyToken, async (req, res) => {
     try {
+        const payload = req.body;
+
+        delete payload.image;
+        delete payload.docFileURL;
+        delete payload._id;
+        delete payload.createdAt;
+        delete payload.lastModified;
+        delete payload.__v;
+        delete payload.children;
+
+        if(payload.slug){
+
+        }
+
         const product = await ProductModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
         if (!product) {
             return res.status(404).send({ msg: 'Product not found' });
