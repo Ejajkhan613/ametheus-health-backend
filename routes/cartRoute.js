@@ -1,4 +1,3 @@
-// routes/cartRoute.js
 const express = require('express');
 const mongoose = require('mongoose');
 const verifyToken = require('../middlewares/auth');
@@ -9,9 +8,9 @@ const WishlistItem = require('../models/wishlistModel');
 const cartRoute = express.Router();
 
 // Add item to cart from product list
-cartRoute.post('/add', verifyToken, async (req, res) => {
+cartRoute.post('/', verifyToken, async (req, res) => {
     try {
-        const { productID, variantID, quantity } = req.body;
+        const { productID, variantID, quantity = 1 } = req.body;
         const userID = req.userDetail._id;
 
         const product = await Product.findById(productID);
@@ -135,6 +134,19 @@ cartRoute.delete('/remove/:cartItemID', verifyToken, async (req, res) => {
         res.status(200).send({ msg: 'Cart item removed successfully' });
     } catch (error) {
         console.error('Error removing cart item:', error);
+        res.status(500).send({ msg: 'Internal server error, try again later' });
+    }
+});
+
+// Remove all cart items
+cartRoute.delete('/remove-all', verifyToken, async (req, res) => {
+    try {
+        const userID = req.userDetail._id;
+        await CartItem.deleteMany({ userID });
+
+        res.status(200).send({ msg: 'All cart items removed successfully' });
+    } catch (error) {
+        console.error('Error removing all cart items:', error);
         res.status(500).send({ msg: 'Internal server error, try again later' });
     }
 });
