@@ -329,7 +329,7 @@ categoryRoute.get('/hierarchy-names', async (req, res) => {
     }
 });
 
-// Get Category and its hierarchy
+// Get Category by its id
 categoryRoute.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -353,6 +353,46 @@ categoryRoute.get('/:id', async (req, res) => {
         return res.status(500).send({ msg: 'Internal server error, try again later' });
     }
 });
+
+// Get Category by its slug
+categoryRoute.get('/slug/:slug', async (req, res) => {
+    try {
+        const { slug } = req.params;
+        let category = await Category.findOne({ slug }).populate('children');
+        category = category.toObject();
+        if (!category) {
+            return res.status(404).send({ msg: 'Category not found' });
+        }
+        if (category.parent) {
+            const parentData = await Category.findById(category.parent);
+            if (!parentData) {
+                return res.status(200).send({ msg: 'Success', category });
+            }
+            category.parentName = parentData.name;
+            category.parentSlug = parentData.slug;
+            return res.status(200).send({ msg: 'Success', category });
+        }
+        return res.status(200).send({ category });
+    } catch (error) {
+        console.error('Error fetching category:', error);
+        return res.status(500).send({ msg: 'Internal server error, try again later' });
+    }
+});
+
+
+// // Route to fetch a single product by slug
+// productRoute.get('/slug/:slug', async (req, res) => {
+//     try {
+//         const product = await ProductModel.findOne({ 'slug': req.params.slug });
+//         if (!product) {
+//             return res.status(404).send({ msg: 'Product not found' });
+//         }
+//         res.status(200).send({ msg: 'Success', data: product });
+//     } catch (error) {
+//         console.error('Error fetching product:', error);
+//         res.status(500).send({ msg: 'Internal server error, try again later' });
+//     }
+// });
 
 // Delete Category
 categoryRoute.delete('/:id', async (req, res) => {
