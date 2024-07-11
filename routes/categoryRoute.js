@@ -186,7 +186,7 @@ categoryRoute.delete('/:id/docFile', async (req, res) => {
 });
 
 // Update Category (excluding image and docFileURL)
-router.patch('/:id', [
+categoryRoute.patch('/:id', [
     body('name').optional().isString().withMessage('Category name must be a string'),
     body('description').optional().isString(),
     body('parent').optional().custom(value => {
