@@ -274,6 +274,7 @@ categoryRoute.get('/:id', async (req, res) => {
             }
             category.parentName = parentData.name;
             category.parentSlug = parentData.slug;
+            console.log(category);
             return res.status(200).send({ msg: 'Success', category });
         }
         return res.status(200).send({ category });
