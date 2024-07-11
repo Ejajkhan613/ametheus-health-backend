@@ -204,6 +204,7 @@ categoryRoute.patch('/:id', [
     try {
         const { id } = req.params;
         const updates = req.body;
+        console.log(updates);
 
         // Fetch existing category to compare name and handle slug
         const existingCategory = await Category.findById(id);
