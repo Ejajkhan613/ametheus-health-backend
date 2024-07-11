@@ -99,7 +99,6 @@ cartRoute.patch('/update-quantity', verifyToken, async (req, res) => {
         const userID = req.userDetail._id;
 
         const cartItem = await CartItem.findById(cartItemID).populate('productID');
-        console.log(cartItem);
         if (!cartItem || cartItem.userID.toString() !== userID.toString()) {
             return res.status(404).send({ msg: 'Cart item not found' });
         }

@@ -267,6 +267,15 @@ categoryRoute.get('/:id', async (req, res) => {
         if (!category) {
             return res.status(404).send({ msg: 'Category not found' });
         }
+        if (category.parent) {
+            const parentData = await Category.findById(category.parent);
+            if(!parentData){
+                return res.status(200).send({ msg: 'Success', category });
+            }
+            category.parentName = parentData.name;
+            category.parentSlug = parentData.slug;
+            return res.status(200).send({ msg: 'Success', category });
+        }
         return res.status(200).send({ category });
     } catch (error) {
         console.error('Error fetching category:', error);
