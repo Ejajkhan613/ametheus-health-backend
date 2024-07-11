@@ -213,7 +213,7 @@ categoryRoute.patch('/:id', [
 
         // Handle slug change if name is updated
         if (updates.name && updates.name !== existingCategory.name) {
-            updates.slug = slugify(updates.name, { lower: true });
+            updates.slug = await categorySlugify(updates.name, { lower: true });
         }
 
         // Prevent modifications to restricted fields
