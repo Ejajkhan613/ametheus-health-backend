@@ -186,11 +186,11 @@ categoryRoute.delete('/:id/docFile', async (req, res) => {
 });
 
 // Update Category (excluding image and docFileURL)
-categoryRoute.patch('/:id', [
+router.patch('/:id', [
     body('name').optional().isString().withMessage('Category name must be a string'),
     body('description').optional().isString(),
     body('parent').optional().custom(value => {
-        if (value !== null && !mongoose.Types.ObjectId.isValid(value)) {
+        if (value !== null && value !== '' && !mongoose.Types.ObjectId.isValid(value)) {
             throw new Error('Parent must be a valid category ID or null');
         }
         return true;
@@ -206,7 +206,7 @@ categoryRoute.patch('/:id', [
         const updates = req.body;
 
         // Fetch existing category to compare name and handle slug
-        const existingCategory = await Category.findById(id).lean();
+        const existingCategory = await Category.findById(id);
         if (!existingCategory) {
             return res.status(404).send({ msg: 'Category not found' });
         }
@@ -221,14 +221,31 @@ categoryRoute.patch('/:id', [
         restrictedFields.forEach(field => delete updates[field]);
 
         // Validate and handle parent category change
-        if (updates.parent) {
-            if (updates.parent === null) {
+        let oldParent = null;
+        if (updates.parent !== undefined) {
+            if (updates.parent === null || updates.parent === '') {
                 updates.parent = null; // Make the category a main category
             } else {
                 const parentCategory = await Category.findById(updates.parent);
                 if (!parentCategory) {
                     return res.status(404).send({ msg: 'Parent category not found' });
                 }
+            }
+
+            // Remove from old parent's children array if old parent exists
+            if (existingCategory.parent) {
+                oldParent = await Category.findById(existingCategory.parent);
+                if (oldParent) {
+                    oldParent.children.pull(id);
+                    await oldParent.save();
+                }
+            }
+
+            // Add to new parent's children array if new parent is not null
+            if (updates.parent) {
+                const newParent = await Category.findById(updates.parent);
+                newParent.children.addToSet(id);
+                await newParent.save();
             }
         }
 
