@@ -189,7 +189,12 @@ categoryRoute.delete('/:id/docFile', async (req, res) => {
 categoryRoute.patch('/:id', [
     body('name').optional().isString().withMessage('Category name must be a string'),
     body('description').optional().isString(),
-    body('parent').optional().isMongoId().withMessage('Parent must be a valid category ID')
+    body('parent').optional().custom(value => {
+        if (value !== null && !mongoose.Types.ObjectId.isValid(value)) {
+            throw new Error('Parent must be a valid category ID or null');
+        }
+        return true;
+    })
 ], async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -200,13 +205,34 @@ categoryRoute.patch('/:id', [
         const { id } = req.params;
         const updates = req.body;
 
+        // Fetch existing category to compare name and handle slug
+        const existingCategory = await Category.findById(id).lean();
+        if (!existingCategory) {
+            return res.status(404).send({ msg: 'Category not found' });
+        }
+
+        // Handle slug change if name is updated
+        if (updates.name && updates.name !== existingCategory.name) {
+            updates.slug = slugify(updates.name, { lower: true });
+        }
+
+        // Prevent modifications to restricted fields
+        const restrictedFields = ['image', 'docFileURL', '_id', '__v', 'children', 'createdAt', 'lastModified'];
+        restrictedFields.forEach(field => delete updates[field]);
+
+        // Validate and handle parent category change
         if (updates.parent) {
-            const parentCategory = await Category.findById(updates.parent);
-            if (!parentCategory) {
-                return res.status(404).send({ msg: 'Parent category not found' });
+            if (updates.parent === null) {
+                updates.parent = null; // Make the category a main category
+            } else {
+                const parentCategory = await Category.findById(updates.parent);
+                if (!parentCategory) {
+                    return res.status(404).send({ msg: 'Parent category not found' });
+                }
             }
         }
 
+        // Update category
         const category = await Category.findByIdAndUpdate(id, updates, { new: true });
         if (!category) {
             return res.status(404).send({ msg: 'Category not found' });
