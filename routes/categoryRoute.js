@@ -219,11 +219,46 @@ categoryRoute.patch('/:id', [
     }
 });
 
-// Get All Categories
+// Get All Categories only name and id
+categoryRoute.get('/view', async (req, res) => {
+    try {
+        const categories = await Category.find().select('name');
+        return res.status(200).send(categories);
+    } catch (error) {
+        console.error('Error fetching categories:', error);
+        return res.status(500).send({ msg: 'Internal server error, try again later' });
+    }
+});
+
+// Get All Categories with Pagination
 categoryRoute.get('/', async (req, res) => {
     try {
-        const categories = await Category.find();
-        return res.status(200).send(categories);
+        const { page = 1, limit = 10 } = req.query; // Default to page 1 and limit 10
+        const pageNumber = parseInt(page, 10);
+        const limitNumber = parseInt(limit, 10);
+
+        if (isNaN(pageNumber) || isNaN(limitNumber) || pageNumber <= 0 || limitNumber <= 0) {
+            return res.status(400).send({ msg: 'Invalid page or limit query parameters' });
+        }
+
+        const totalCategories = await Category.countDocuments();
+        const totalPages = Math.ceil(totalCategories / limitNumber);
+
+        if (pageNumber > totalPages) {
+            return res.status(400).send({ msg: 'Page number exceeds total pages available' });
+        }
+
+        const categories = await Category.find()
+            .skip((pageNumber - 1) * limitNumber)
+            .limit(limitNumber);
+
+        return res.status(200).send({
+            data: categories,
+            page: pageNumber,
+            limit: limitNumber,
+            totalPages,
+            totalCategories
+        });
     } catch (error) {
         console.error('Error fetching categories:', error);
         return res.status(500).send({ msg: 'Internal server error, try again later' });
@@ -270,13 +305,11 @@ categoryRoute.get('/:id', async (req, res) => {
         }
         if (category.parent) {
             const parentData = await Category.findById(category.parent);
-            if(!parentData){
+            if (!parentData) {
                 return res.status(200).send({ msg: 'Success', category });
             }
             category.parentName = parentData.name;
             category.parentSlug = parentData.slug;
-            console.log("DATA",category.parentName);
-            console.log("DATA",category.parentSlug);
             return res.status(200).send({ msg: 'Success', category });
         }
         return res.status(200).send({ category });
