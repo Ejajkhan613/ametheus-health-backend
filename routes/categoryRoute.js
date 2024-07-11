@@ -298,8 +298,7 @@ categoryRoute.get('/', async (req, res) => {
         const categories = await Category.find(filter)
             .sort(sort)
             .skip((pageNumber - 1) * limitNumber)
-            .limit(limitNumber)
-            .select('_id name slug createdAt lastModified'); // Select only needed fields
+            .limit(limitNumber);
 
         return res.status(200).send({
             data: categories,
