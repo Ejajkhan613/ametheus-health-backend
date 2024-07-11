@@ -334,10 +334,10 @@ categoryRoute.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
         let category = await Category.findById(id).populate('children');
-        category = category.toObject();
         if (!category) {
             return res.status(404).send({ msg: 'Category not found' });
         }
+        category = category.toObject();
         if (category.parent) {
             const parentData = await Category.findById(category.parent);
             if (!parentData) {
@@ -359,10 +359,10 @@ categoryRoute.get('/slug/:slug', async (req, res) => {
     try {
         const { slug } = req.params;
         let category = await Category.findOne({ slug }).populate('children');
-        category = category.toObject();
         if (!category) {
             return res.status(404).send({ msg: 'Category not found' });
         }
+        category = category.toObject();
         if (category.parent) {
             const parentData = await Category.findById(category.parent);
             if (!parentData) {
