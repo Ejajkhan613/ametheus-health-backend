@@ -294,6 +294,41 @@ categoryRoute.get('/hierarchy', async (req, res) => {
     }
 });
 
+// Get Category Hierarchy names and id's
+categoryRoute.get('/hierarchy-names', async (req, res) => {
+    try {
+        // Fetch categories with only _id and name fields
+        const categories = await Category.find({}, '_id name parent').lean();
+
+        // Creating a map to hold category data and child references
+        const categoryMap = {};
+        categories.forEach(category => {
+            categoryMap[category._id] = {
+                _id: category._id,
+                name: category.name,
+                children: []
+            };
+        });
+
+        // Creating the hierarchy
+        const rootCategories = [];
+        categories.forEach(category => {
+            if (category.parent) {
+                if (categoryMap[category.parent]) {
+                    categoryMap[category.parent].children.push(categoryMap[category._id]);
+                }
+            } else {
+                rootCategories.push(categoryMap[category._id]);
+            }
+        });
+
+        return res.status(200).send(rootCategories);
+    } catch (error) {
+        console.error('Error fetching category hierarchy:', error);
+        return res.status(500).send({ msg: 'Internal server error, try again later' });
+    }
+});
+
 // Get Category and its hierarchy
 categoryRoute.get('/:id', async (req, res) => {
     try {
