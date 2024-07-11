@@ -391,6 +391,17 @@ productRoute.get('/:id', async (req, res) => {
     }
 });
 
+// Route to fetch a single product by ID
+productRoute.get('/category/:id', async (req, res) => {
+    try {
+        const product = await ProductModel.find({ categoryID: req.params.id });
+        res.status(200).send({ msg: 'Success', data: product });
+    } catch (error) {
+        console.error('Error fetching product:', error);
+        res.status(500).send({ msg: 'Internal server error, try again later' });
+    }
+});
+
 // Route to fetch a single product by slug
 productRoute.get('/slug/:slug', async (req, res) => {
     try {
@@ -418,7 +429,7 @@ productRoute.put('/:id', verifyToken, async (req, res) => {
         delete payload.__v;
         delete payload.children;
 
-        if(payload.slug){
+        if (payload.slug) {
 
         }
 

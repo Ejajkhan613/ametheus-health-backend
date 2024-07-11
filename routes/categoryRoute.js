@@ -433,21 +433,6 @@ categoryRoute.get('/slug/:slug', async (req, res) => {
     }
 });
 
-
-// // Route to fetch a single product by slug
-// productRoute.get('/slug/:slug', async (req, res) => {
-//     try {
-//         const product = await ProductModel.findOne({ 'slug': req.params.slug });
-//         if (!product) {
-//             return res.status(404).send({ msg: 'Product not found' });
-//         }
-//         res.status(200).send({ msg: 'Success', data: product });
-//     } catch (error) {
-//         console.error('Error fetching product:', error);
-//         res.status(500).send({ msg: 'Internal server error, try again later' });
-//     }
-// });
-
 // Delete Category
 categoryRoute.delete('/:id', async (req, res) => {
     try {
