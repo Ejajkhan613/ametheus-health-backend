@@ -304,7 +304,6 @@ categoryRoute.get('/', async (req, res) => {
             .sort(sort)
             .skip((pageNumber - 1) * limitNumber)
             .limit(limitNumber)
-            .select('_id name slug createdAt lastModified'); // Select only needed fields
 
         return res.status(200).send({
             data: categories,
