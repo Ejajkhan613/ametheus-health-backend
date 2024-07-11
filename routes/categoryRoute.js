@@ -220,32 +220,41 @@ router.patch('/:id', [
         const restrictedFields = ['image', 'docFileURL', '_id', '__v', 'children', 'createdAt', 'lastModified'];
         restrictedFields.forEach(field => delete updates[field]);
 
-        // Validate and handle parent category change
-        let oldParent = null;
-        if (updates.parent !== undefined) {
-            if (updates.parent === null || updates.parent === '') {
-                updates.parent = null; // Make the category a main category
+        // Handle parent category change
+        if (updates.parent !== null) {
+            const oldParentId = existingCategory.parent;
+            const newParentId = updates.parent;
+
+            // If old parent is null and new parent is null, do nothing
+            if (oldParentId === null && newParentId === null) {
+                // Do nothing
             } else {
-                const parentCategory = await Category.findById(updates.parent);
-                if (!parentCategory) {
-                    return res.status(404).send({ msg: 'Parent category not found' });
-                }
-            }
+                // If old parent is null and new parent is not null
+                if (oldParentId === null && newParentId !== null) {
+                    const newParentCategory = await Category.findById(newParentId);
+                    if (!newParentCategory) {
+                        return res.status(404).send({ msg: 'New parent category not found' });
+                    }
+                    newParentCategory.children.addToSet(id);
+                    await newParentCategory.save();
+                } else if (oldParentId !== null) {
+                    // If old parent is not null, remove current category from old parent's children
+                    const oldParentCategory = await Category.findById(oldParentId);
+                    if (oldParentCategory) {
+                        oldParentCategory.children.pull(id);
+                        await oldParentCategory.save();
+                    }
 
-            // Remove from old parent's children array if old parent exists
-            if (existingCategory.parent) {
-                oldParent = await Category.findById(existingCategory.parent);
-                if (oldParent) {
-                    oldParent.children.pull(id);
-                    await oldParent.save();
+                    // If new parent is not null, add current category to new parent's children
+                    if (newParentId !== null) {
+                        const newParentCategory = await Category.findById(newParentId);
+                        if (!newParentCategory) {
+                            return res.status(404).send({ msg: 'New parent category not found' });
+                        }
+                        newParentCategory.children.addToSet(id);
+                        await newParentCategory.save();
+                    }
                 }
-            }
-
-            // Add to new parent's children array if new parent is not null
-            if (updates.parent) {
-                const newParent = await Category.findById(updates.parent);
-                newParent.children.addToSet(id);
-                await newParent.save();
             }
         }
 
@@ -261,6 +270,7 @@ router.patch('/:id', [
         return res.status(500).send({ msg: 'Internal server error, try again later' });
     }
 });
+
 
 // Get All Categories only name and id
 categoryRoute.get('/view', async (req, res) => {
