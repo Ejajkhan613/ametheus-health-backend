@@ -276,15 +276,20 @@ categoryRoute.get('/', async (req, res) => {
 
         const sort = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
 
-        const searchFields = ['_id', 'name', 'slug'];
+        const searchFields = ['name', 'slug'];
         const searchConditions = [];
 
-        searchFields.forEach(field => {
-            if (search) {
-                const searchRegex = new RegExp(search, 'i');
-                searchConditions.push({ [field]: searchRegex });
-            }
-        });
+        // Handle ObjectId separately
+        if (mongoose.Types.ObjectId.isValid(search)) {
+            searchConditions.push({ _id: search });
+        } else {
+            searchFields.forEach(field => {
+                if (search) {
+                    const searchRegex = new RegExp(search, 'i');
+                    searchConditions.push({ [field]: searchRegex });
+                }
+            });
+        }
 
         const filter = searchConditions.length ? { $or: searchConditions } : {};
 
@@ -298,7 +303,8 @@ categoryRoute.get('/', async (req, res) => {
         const categories = await Category.find(filter)
             .sort(sort)
             .skip((pageNumber - 1) * limitNumber)
-            .limit(limitNumber);
+            .limit(limitNumber)
+            .select('_id name slug createdAt lastModified'); // Select only needed fields
 
         return res.status(200).send({
             data: categories,
