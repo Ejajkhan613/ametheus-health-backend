@@ -375,28 +375,7 @@ categoryRoute.delete('/:id', async (req, res) => {
         }
 
         await Category.findByIdAndDelete(id);
-
-        const categories = await Category.find().lean();
-
-        // Creating a map to hold category data and child references
-        const categoryMap = {};
-        categories.forEach(category => {
-            categoryMap[category._id] = { ...category, children: [] };
-        });
-
-        // Creating the hierarchy
-        const rootCategories = [];
-        categories.forEach(category => {
-            if (category.parent) {
-                if (categoryMap[category.parent]) {
-                    categoryMap[category.parent].children.push(categoryMap[category._id]);
-                }
-            } else {
-                rootCategories.push(categoryMap[category._id]);
-            }
-        });
-
-        return res.status(200).send({ msg: 'Category deleted successfully', data: rootCategories });
+        return res.status(200).send({ msg: 'Category deleted successfully' });
     } catch (error) {
         console.error('Error deleting category:', error);
         return res.status(500).send({ msg: 'Internal server error, try again later' });
