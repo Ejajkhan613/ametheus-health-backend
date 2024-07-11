@@ -256,10 +256,10 @@ categoryRoute.get('/view', async (req, res) => {
     }
 });
 
-// Get All Categories with Pagination
+// Get All Categories with Pagination, Filtering, and Sorting
 categoryRoute.get('/', async (req, res) => {
     try {
-        const { page = 1, limit = 10 } = req.query; // Default to page 1 and limit 10
+        const { page = 1, limit = 10, search = '', sortBy = 'createdAt', sortOrder = 'asc' } = req.query;
         const pageNumber = parseInt(page, 10);
         const limitNumber = parseInt(limit, 10);
 
@@ -267,16 +267,39 @@ categoryRoute.get('/', async (req, res) => {
             return res.status(400).send({ msg: 'Invalid page or limit query parameters' });
         }
 
-        const totalCategories = await Category.countDocuments();
+        const sortFields = ['createdAt', 'lastModified', 'name'];
+        const sortDirections = ['asc', 'desc'];
+
+        if (!sortFields.includes(sortBy) || !sortDirections.includes(sortOrder)) {
+            return res.status(400).send({ msg: 'Invalid sortBy or sortOrder query parameters' });
+        }
+
+        const sort = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
+
+        const searchFields = ['_id', 'name', 'slug'];
+        const searchConditions = [];
+
+        searchFields.forEach(field => {
+            if (search) {
+                const searchRegex = new RegExp(search, 'i');
+                searchConditions.push({ [field]: searchRegex });
+            }
+        });
+
+        const filter = searchConditions.length ? { $or: searchConditions } : {};
+
+        const totalCategories = await Category.countDocuments(filter);
         const totalPages = Math.ceil(totalCategories / limitNumber);
 
         if (pageNumber > totalPages) {
             return res.status(400).send({ msg: 'Page number exceeds total pages available' });
         }
 
-        const categories = await Category.find()
+        const categories = await Category.find(filter)
+            .sort(sort)
             .skip((pageNumber - 1) * limitNumber)
-            .limit(limitNumber);
+            .limit(limitNumber)
+            .select('_id name slug createdAt lastModified'); // Select only needed fields
 
         return res.status(200).send({
             data: categories,
@@ -291,6 +314,7 @@ categoryRoute.get('/', async (req, res) => {
     }
 });
 
+// Get all categories in hierarchy
 categoryRoute.get('/hierarchy', async (req, res) => {
     try {
         const categories = await Category.find().lean();
