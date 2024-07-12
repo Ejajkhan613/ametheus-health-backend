@@ -8,6 +8,10 @@ const cors = require('cors');
 const morgan = require('morgan');
 const bodyParser = require('body-parser');
 
+const cron = require('node-cron');
+const axios = require('axios');
+const ExchangeRate = require('./models/currencyPriceModel');
+
 const DBConnection = require('./config/db');
 const { rateLimiter } = require('./middlewares/rateLimiter');
 const logger = require('./middlewares/logger');
@@ -21,6 +25,7 @@ const genericRoute = require('./routes/genericRoute');
 const productRoute = require('./routes/productRoute');
 const wishlistRoute = require('./routes/wishlistRoute');
 const cartRoute = require('./routes/cartRoute');
+const currencyRouter = require('./routes/currencyPriceRoute');
 
 const app = express();
 
@@ -67,20 +72,56 @@ app.use('/ah/api/v1/wishlist', wishlistRoute);
 // Cart
 app.use('/ah/api/v1/cart', cartRoute);
 
+// Cart
+app.use('/ah/api/v1/currency', currencyRouter);
 
 
 
-// HTTPS Server Configuration
-const privateKey = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/privkey.pem', 'utf8');
-const certificate = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/cert.pem', 'utf8');
-const credentials = { key: privateKey, cert: certificate };
 
-// Starting HTTPS Server
-const httpsServer = https.createServer(credentials, app);
+// // HTTPS Server Configuration
+// const privateKey = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/privkey.pem', 'utf8');
+// const certificate = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/cert.pem', 'utf8');
+// const credentials = { key: privateKey, cert: certificate };
+
+// // Starting HTTPS Server
+// const httpsServer = https.createServer(credentials, app);
 
 
+const fetchAndUpdateRates = async () => {
+    try {
+        const response = await axios.get('https://v6.exchangerate-api.com/v6/136d8bdde0f5c2356bc2125f/latest/INR');
+        const data = response.data;
 
-httpsServer.listen(Port, async () => {
+        if (data.result === 'success') {
+            const conversionRates = data.conversion_rates;
+            const currencies = ['USD', 'EUR', 'GBP', 'RUB', 'AED'];
+
+            for (const currency of currencies) {
+                const rate = conversionRates[currency];
+                if (rate) {
+                    await ExchangeRate.findOneAndUpdate(
+                        { currency },
+                        { rate, lastUpdated: Date.now() },
+                        { upsert: true }
+                    );
+                }
+            }
+            console.log("yes")
+        } else {
+            console.error('Error fetching exchange rates:', data);
+        }
+    } catch (error) {
+        console.error('Error fetching exchange rates:', error);
+    }
+};
+
+// fetchAndUpdateRates();
+
+// Schedule the cron job to run every 6 hours
+cron.schedule('0 */6 * * *', fetchAndUpdateRates);
+
+
+app.listen(Port, async () => {
     try {
         await DBConnection;
         console.log(`Connected to DB`);

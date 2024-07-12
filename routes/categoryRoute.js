@@ -461,7 +461,7 @@ categoryRoute.get('/slug/:slug', async (req, res) => {
     }
 });
 
-// Delete Category
+// Delete Category along with Image and Document
 categoryRoute.delete('/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -471,6 +471,17 @@ categoryRoute.delete('/:id', async (req, res) => {
             return res.status(404).send({ msg: 'Category not found' });
         }
 
+        // Delete Image if exists
+        if (category.image) {
+            await deleteFileFromS3(category.image); // Function to delete image from S3
+        }
+
+        // Delete Document if exists
+        if (category.docFileURL) {
+            await deleteFileFromS3(category.docFileURL); // Function to delete document from S3
+        }
+
+        // Remove category from parent's children list if it has a parent
         if (category.parent) {
             const parentCategory = await Category.findById(category.parent);
             if (parentCategory) {
@@ -481,7 +492,9 @@ categoryRoute.delete('/:id', async (req, res) => {
             }
         }
 
+        // Finally, delete the category itself
         await Category.findByIdAndDelete(id);
+
         return res.status(200).send({ msg: 'Category deleted successfully' });
     } catch (error) {
         console.error('Error deleting category:', error);
