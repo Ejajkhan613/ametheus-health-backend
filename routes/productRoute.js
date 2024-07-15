@@ -361,11 +361,11 @@ productRoute.get('/', async (req, res) => {
         let exchangeRate = { rate: 1 };
         let currencySymbol = "₹";
 
-        if (req.body.currency && req.body.currency !== 'INR') {
-            const foundExchangeRate = await ExchangeRate.findOne({ currency: req.body.currency });
+        if (req.query.currency && req.query.currency !== 'INR') {
+            const foundExchangeRate = await ExchangeRate.findOne({ currency: req.query.currency });
             if (foundExchangeRate) {
                 exchangeRate = foundExchangeRate;
-                currencySymbol = exchangeRate.symbol || req.body.currency;
+                currencySymbol = exchangeRate.symbol || req.query.currency;
             } else {
                 return res.status(400).send({ msg: 'Currency not supported' });
             }
