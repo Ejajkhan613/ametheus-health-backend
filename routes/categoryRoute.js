@@ -406,7 +406,7 @@ categoryRoute.get('/hierarchy', async (req, res) => {
 categoryRoute.get('/hierarchy-names', async (req, res) => {
     try {
         // Fetch categories with only _id and name fields
-        const categories = await Category.find({}, '_id name parent').lean();
+        const categories = await Category.find({}, '_id name parent slug').lean();
 
         // Creating a map to hold category data and child references
         const categoryMap = {};
