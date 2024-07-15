@@ -516,7 +516,7 @@ categoryRoute.get('/slug/:slug', async (req, res) => {
         }
         category = category.toObject();
 
-        const products = await ProductModel.find({ genericID: id }).lean();
+        const products = await ProductModel.find({ categoryID: id }).lean();
 
         // Fetch exchange rate based on user's country and convert prices
         let exchangeRate = { rate: 1 };
