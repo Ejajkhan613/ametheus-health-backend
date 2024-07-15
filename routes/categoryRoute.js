@@ -7,6 +7,8 @@ const mongoose = require('mongoose');
 const { body, validationResult } = require('express-validator');
 const Category = require('../models/categoryModel');
 const categorySlugify = require('../utils/categorySlugify');
+const ExchangeRate = require('../models/currencyPriceModel');
+const ProductModel = require('../models/productModel');
 
 const categoryRoute = express.Router();
 
