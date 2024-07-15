@@ -61,6 +61,10 @@ categoryRoute.post('/', [
     body('description').optional().isString(),
     body('parent').optional().isMongoId().withMessage('Parent must be a valid category ID')
 ], async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).json({ msg: 'Access Denied' });
+    }
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -91,6 +95,10 @@ categoryRoute.post('/', [
 
 // Add Image to Category
 categoryRoute.patch('/:id/image', upload.single('image'), async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).json({ msg: 'Access Denied' });
+    }
+
     try {
         const { id } = req.params;
         const category = await Category.findById(id);
@@ -115,6 +123,10 @@ categoryRoute.patch('/:id/image', upload.single('image'), async (req, res) => {
 
 // Delete Image from Category
 categoryRoute.delete('/:id/image', async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).json({ msg: 'Access Denied' });
+    }
+
     try {
         const { id } = req.params;
         const category = await Category.findById(id);
@@ -139,6 +151,10 @@ categoryRoute.delete('/:id/image', async (req, res) => {
 
 // Add Document to Category
 categoryRoute.patch('/:id/docFile', upload.single('file'), async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).json({ msg: 'Access Denied' });
+    }
+
     try {
         const { id } = req.params;
         const category = await Category.findById(id);
@@ -163,6 +179,10 @@ categoryRoute.patch('/:id/docFile', upload.single('file'), async (req, res) => {
 
 // Delete Document from Category
 categoryRoute.delete('/:id/docFile', async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).json({ msg: 'Access Denied' });
+    }
+
     try {
         const { id } = req.params;
         const category = await Category.findById(id);
@@ -196,6 +216,10 @@ categoryRoute.patch('/:id', [
         return true;
     })
 ], async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).json({ msg: 'Access Denied' });
+    }
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -321,8 +345,8 @@ categoryRoute.get('/', async (req, res) => {
 
         const filter = searchConditions.length ? { $or: searchConditions } : {};
 
-        const totalCategories = await Category.countDocuments(filter);
-        const totalPages = Math.ceil(totalCategories / limitNumber);
+        const totalCount = await Category.countDocuments(filter);
+        const totalPages = Math.ceil(totalCount / limitNumber);
 
         if (pageNumber > totalPages) {
             return res.status(400).send({ msg: 'Page number exceeds total pages available' });
@@ -331,14 +355,16 @@ categoryRoute.get('/', async (req, res) => {
         const categories = await Category.find(filter)
             .sort(sort)
             .skip((pageNumber - 1) * limitNumber)
+            .collation({ locale: 'en', strength: 2 })
             .limit(limitNumber)
 
         return res.status(200).send({
+            msg: 'Success',
             data: categories,
             page: pageNumber,
             limit: limitNumber,
             totalPages,
-            totalCategories
+            totalCount
         });
     } catch (error) {
         console.error('Error fetching categories:', error);
@@ -463,6 +489,10 @@ categoryRoute.get('/slug/:slug', async (req, res) => {
 
 // Delete Category along with Image and Document
 categoryRoute.delete('/:id', async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).json({ msg: 'Access Denied' });
+    }
+
     try {
         const { id } = req.params;
 
@@ -473,12 +503,12 @@ categoryRoute.delete('/:id', async (req, res) => {
 
         // Delete Image if exists
         if (category.image) {
-            await deleteFileFromS3(category.image); // Function to delete image from S3
+            await deleteFileFromS3(category.image);
         }
 
         // Delete Document if exists
         if (category.docFileURL) {
-            await deleteFileFromS3(category.docFileURL); // Function to delete document from S3
+            await deleteFileFromS3(category.docFileURL);
         }
 
         // Remove category from parent's children list if it has a parent

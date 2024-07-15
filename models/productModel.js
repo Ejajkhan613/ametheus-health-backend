@@ -13,6 +13,10 @@ const variantSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
+    currency: {
+        type: String,
+        default: "₹"
+    },
     price: {
         type: Number,
         default: 0

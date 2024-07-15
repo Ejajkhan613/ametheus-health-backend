@@ -1,3 +1,4 @@
+// models/currencyPriceModel.js
 const mongoose = require('mongoose');
 
 const exchangeRateSchema = new mongoose.Schema({
@@ -9,6 +10,9 @@ const exchangeRateSchema = new mongoose.Schema({
     rate: {
         type: Number,
         required: true
+    },
+    symbol: {
+        type: String
     },
     lastUpdated: {
         type: Date,

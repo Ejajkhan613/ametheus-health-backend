@@ -29,6 +29,10 @@ const validateManufacturer = [
 
 // Create a new manufacturer
 manufacturerRouter.post('/', validateManufacturer, verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).json({ msg: 'Access Denied' });
+    }
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -53,6 +57,10 @@ manufacturerRouter.post('/', validateManufacturer, verifyToken, async (req, res)
 
 // Update a manufacturer
 manufacturerRouter.patch('/:id', validateManufacturer, verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).json({ msg: 'Access Denied' });
+    }
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -107,6 +115,10 @@ manufacturerRouter.get('/:id', async (req, res) => {
 
 // Delete a manufacturer
 manufacturerRouter.delete('/:id', verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).json({ msg: 'Access Denied' });
+    }
+
     try {
         const { id } = req.params;
 

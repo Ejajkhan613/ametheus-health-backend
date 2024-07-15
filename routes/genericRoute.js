@@ -3,7 +3,7 @@ const slugify = require('slugify');
 const { body, validationResult } = require('express-validator');
 const mongoose = require('mongoose');
 
-const Generic = require('../models/genericModel');
+const GenericModel = require('../models/genericModel');
 const ProductModel = require('../models/productModel');
 const verifyToken = require('../middlewares/auth');
 
@@ -13,7 +13,7 @@ async function createSlug(text) {
     let uniqueSlug = slug;
     let count = 0;
 
-    while (await Generic.findOne({ slug: uniqueSlug })) {
+    while (await GenericModel.findOne({ slug: uniqueSlug })) {
         count++;
         uniqueSlug = `${slug}-${count}`;
     }
@@ -37,8 +37,39 @@ const validateGeneric = [
 // GET all generics
 genericRoute.get('/', async (req, res) => {
     try {
-        const generics = await Generic.find();
-        return res.status(200).json({ msg: "Success", data: generics });
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const filters = {};
+
+        if (req.query.name) filters.name = new RegExp(req.query.name, 'i');
+
+        const sortOptions = {};
+        const { sortBy = 'name', order = 'asc' } = req.query;
+        if (sortBy && order) {
+            sortOptions[sortBy] = order === 'asc' ? 1 : -1;
+        }
+
+        const totalCount = await GenericModel.countDocuments(filters);
+        const totalPages = Math.ceil(totalCount / limit);
+
+        const Generics = await GenericModel.find(filters)
+            .skip(skip)
+            .limit(limit)
+            .select('name')
+            .sort(sortOptions)
+            .collation({ locale: 'en', strength: 2 })
+            .lean();
+
+        res.status(200).send({
+            msg: 'Success',
+            data: Generics,
+            page,
+            limit,
+            totalPages,
+            totalCount
+        });
     } catch (error) {
         console.error('Error fetching generics:', error);
         return res.status(500).json({ msg: 'Internal server error, try again later' });
@@ -49,14 +80,15 @@ genericRoute.get('/', async (req, res) => {
 genericRoute.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const generic = await Generic.findById(id);
+        const generic = await GenericModel.findById(id).lean();
         if (!generic) {
             return res.status(404).json({ msg: 'Generic not found' });
         }
 
-        // Assuming you have a Product model that references the genericID
-        const products = await ProductModel.find({ genericID: id }); // Adjust the query according to your Product model
-        return res.status(200).json({ msg: 'Success', data: generic, products });
+        const products = await ProductModel.find({ genericID: id });
+        generic.products = products;
+
+        return res.status(200).json({ msg: 'Success', data: generic });
     } catch (error) {
         console.error('Error fetching generic:', error);
         return res.status(500).json({ msg: 'Internal server error, try again later' });
@@ -75,9 +107,9 @@ genericRoute.post('/', validateGeneric, verifyToken, async (req, res) => {
     }
 
     try {
-        const { name, uses, works, sideEffects, expertAdvice, faq } = req.body;
+        const { name, uses = "", works = "", sideEffects = "", expertAdvice = "", faq = "" } = req.body;
         const slug = await createSlug(name);
-        const generic = new Generic({ name, slug, uses, works, sideEffects, expertAdvice, faq });
+        const generic = new GenericModel({ name, slug, uses, works, sideEffects, expertAdvice, faq });
         await generic.save();
         return res.status(201).json({ msg: 'Generic created successfully', data: generic });
     } catch (error) {
@@ -109,7 +141,7 @@ genericRoute.patch('/:id', validateGeneric, verifyToken, async (req, res) => {
         delete updates.slug;
         delete updates.__V;
 
-        const generic = await Generic.findByIdAndUpdate(id, updates, { new: true });
+        const generic = await GenericModel.findByIdAndUpdate(id, updates, { new: true });
         if (!generic) {
             return res.status(404).json({ msg: 'Generic not found' });
         }
@@ -129,7 +161,7 @@ genericRoute.delete('/:id', verifyToken, async (req, res) => {
 
     try {
         const { id } = req.params;
-        const generic = await Generic.findByIdAndDelete(id);
+        const generic = await GenericModel.findByIdAndDelete(id);
         if (!generic) {
             return res.status(404).json({ msg: 'Generic not found' });
         }

@@ -8,6 +8,7 @@ const createSlug = require('../utils/slugify');
 const generateSKU = require('../utils/skuGenerator');
 
 const AWS = require('aws-sdk');
+const ExchangeRate = require('../models/currencyPriceModel');
 
 const s3 = new AWS.S3({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -356,20 +357,56 @@ productRoute.get('/', async (req, res) => {
         const totalProducts = await ProductModel.countDocuments(filters);
         const totalPages = Math.ceil(totalProducts / limit);
 
+        // Fetch exchange rate based on user's country and convert prices
+        let exchangeRate = { rate: 1 };
+        let currencySymbol = "₹";
+
+        if (req.body.currency && req.body.currency !== 'INR') {
+            const foundExchangeRate = await ExchangeRate.findOne({ currency: req.body.currency });
+            if (foundExchangeRate) {
+                exchangeRate = foundExchangeRate;
+                currencySymbol = exchangeRate.symbol || req.body.currency;
+            } else {
+                return res.status(400).send({ msg: 'Currency not supported' });
+            }
+        }
+
         const products = await ProductModel.find(filters)
             .skip(skip)
             .limit(limit)
-            .sort(sortOptions);
+            .sort(sortOptions)
+            .collation({ locale: 'en', strength: 2 })
+            .lean(); // Use lean() to get plain JavaScript objects for easier manipulation
+
+        // Adjust product prices based on exchange rate
+        products.forEach(product => {
+            product.variants.forEach(variant => {
+                const indianMRP = variant.price || 0; // Replace with actual field name for Indian MRP
+                const indianSaleMRP = variant.salePrice || 0; // Replace with actual field name for Indian MRP
+                const margin = variant.margin / 100 || 0.01; // Default margin is 1% if not provided
+
+                if (exchangeRate.rate !== 1) { // Not INR
+                    // Apply margin markup for non-INR currencies
+                    const priceWithMargin = indianMRP * (1 + margin);
+                    const salePriceWithMargin = indianSaleMRP * (1 + margin);
+                    variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
+                    variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2)); // Adjust sale price similarly if needed
+                } else {
+                    // No additional markup for INR
+                    variant.price = Number(indianMRP.toFixed(2));
+                    variant.salePrice = Number(indianSaleMRP.toFixed(2)); // Assuming sale price same as price for INR
+                }
+                variant.currency = currencySymbol; // Set the currency symbol
+            });
+        });
 
         res.status(200).send({
             msg: 'Success',
             data: products,
-            pagination: {
-                totalProducts,
-                totalPages,
-                currentPage: page,
-                pageSize: limit
-            }
+            totalProducts,
+            totalPages,
+            currentPage: page,
+            pageSize: limit
         });
     } catch (error) {
         console.error('Error fetching products:', error);
