@@ -320,10 +320,17 @@ categoryRoute.get('/view', async (req, res) => {
                         name: 1,
                         image: 1,
                         slug: 1,
-                        products: { $size: '$products' }
+                        productsCount: { $size: '$products' }
                     }
                 }
             ]);
+
+            // Debug: Check if products are correctly matched with categories
+            const products = await Product.find({});
+            console.log('All products:', products);
+            const categoryIds = categories.map(cat => cat._id);
+            const unmatchedProducts = products.filter(prod => !categoryIds.includes(prod.categoryID));
+            console.log('Unmatched products:', unmatchedProducts);
         } else {
             categories = await Category.find().select('name');
         }
