@@ -323,18 +323,11 @@ productRoute.delete('/:id', verifyToken, async (req, res) => {
 });
 
 // Route to fetch all products with pagination, filtering, and sorting
-productRoute.get('/', async (req, res) => {
+productRoute.get('/search/', async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const skip = (page - 1) * limit;
         const { search = '' } = req.query;
 
         const filters = {};
-        const {
-            title, slug, sku, genericID, treatment, minPrice, maxPrice, packSize,
-            categoryID, manufacturerID, tags, originCountry, isVisible
-        } = req.query;
 
         const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -355,6 +348,70 @@ productRoute.get('/', async (req, res) => {
                 filters.$or.push({ _id: search });
             }
         }
+
+        // Fetch exchange rate based on user's country and convert prices
+        let exchangeRate = { rate: 1 };
+        let currencySymbol = "₹";
+
+        if (req.query.currency && req.query.currency !== 'INR') {
+            const foundExchangeRate = await ExchangeRate.findOne({ currency: req.query.currency });
+            if (foundExchangeRate) {
+                exchangeRate = foundExchangeRate;
+                currencySymbol = exchangeRate.symbol || req.query.currency;
+            } else {
+                return res.status(400).send({ msg: 'Currency not supported' });
+            }
+        }
+
+        const products = await ProductModel.find(filters)
+            .collation({ locale: 'en', strength: 2 })
+            .lean();
+
+        // Adjust product prices based on exchange rate
+        products.forEach(product => {
+            product.variants.forEach(variant => {
+                const indianMRP = variant.price || 0;
+                const indianSaleMRP = variant.salePrice || 0;
+                const margin = variant.margin / 100 || 0.01;
+
+                if (exchangeRate.rate !== 1) { // Not INR
+                    const priceWithMargin = indianMRP * (1 + margin);
+                    const salePriceWithMargin = indianSaleMRP * (1 + margin);
+                    variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
+                    variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
+                } else {
+                    // No additional markup for INR
+                    variant.price = Number(indianMRP.toFixed(2));
+                    variant.salePrice = Number(indianSaleMRP.toFixed(2));
+                }
+                variant.currency = currencySymbol; // Set the currency symbol
+            });
+        });
+
+        res.status(200).send({
+            msg: 'Success',
+            data: products
+        });
+    } catch (error) {
+        console.error('Error fetching products:', error);
+        res.status(500).send({ msg: 'Internal server error, try again later' });
+    }
+});
+
+// Route to fetch all products with pagination, filtering, and sorting
+productRoute.get('/', async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const filters = {};
+        const {
+            title, slug, sku, genericID, treatment, minPrice, maxPrice, packSize,
+            categoryID, manufacturerID, tags, originCountry, isVisible
+        } = req.query;
+
+        const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
         if (title) filters.title = new RegExp(title, 'i');
         if (slug) filters.slug = new RegExp(slug, 'i');
