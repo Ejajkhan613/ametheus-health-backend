@@ -320,7 +320,7 @@ categoryRoute.get('/view', async (req, res) => {
                         name: 1,
                         image: 1,
                         slug: 1,
-                        products: { $size: '$Products' }
+                        products: { $size: '$products' }
                     }
                 }
             ]);
