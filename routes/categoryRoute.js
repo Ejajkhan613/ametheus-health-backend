@@ -552,7 +552,7 @@ categoryRoute.get('/slug/:slug', async (req, res) => {
             });
         });
 
-        generic.products = products;
+        category.products = products;
 
         if (category.parent) {
             const parentData = await Category.findById(category.parent);
