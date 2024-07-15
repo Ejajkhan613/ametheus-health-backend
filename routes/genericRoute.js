@@ -58,7 +58,6 @@ genericRoute.get('/', async (req, res) => {
         const Generics = await GenericModel.find(filters)
             .skip(skip)
             .limit(limit)
-            .select('name')
             .sort(sortOptions)
             .collation({ locale: 'en', strength: 2 })
             .lean();
