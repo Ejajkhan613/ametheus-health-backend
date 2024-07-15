@@ -312,7 +312,7 @@ categoryRoute.get('/view', async (req, res) => {
                         from: 'Products',
                         localField: '_id',
                         foreignField: 'categoryID',
-                        as: 'Product'
+                        as: 'Products'
                     }
                 },
                 {
@@ -320,7 +320,7 @@ categoryRoute.get('/view', async (req, res) => {
                         name: 1,
                         image: 1,
                         slug: 1,
-                        products: { $size: '$Product' }
+                        products: { $size: '$Products' }
                     }
                 }
             ]);
