@@ -326,7 +326,7 @@ categoryRoute.get('/view', async (req, res) => {
             ]);
 
             // Debug: Check if products are correctly matched with categories
-            const products = await Product.find({});
+            const products = await ProductModel.find({});
             console.log('All products:', products);
             const categoryIds = categories.map(cat => cat._id);
             const unmatchedProducts = products.filter(prod => !categoryIds.includes(prod.categoryID));
