@@ -319,6 +319,7 @@ categoryRoute.get('/view', async (req, res) => {
                     $project: {
                         name: 1,
                         image: 1,
+                        slug: 1,
                         totalProductsCount: { $size: '$products' }
                     }
                 }
