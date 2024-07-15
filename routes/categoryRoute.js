@@ -447,6 +447,45 @@ categoryRoute.get('/:id', async (req, res) => {
             return res.status(404).send({ msg: 'Category not found' });
         }
         category = category.toObject();
+
+        const products = await ProductModel.find({ categoryID: id }).lean();
+
+        // Fetch exchange rate based on user's country and convert prices
+        let exchangeRate = { rate: 1 };
+        let currencySymbol = "₹";
+
+        if (req.query.currency && req.query.currency !== 'INR') {
+            const foundExchangeRate = await ExchangeRate.findOne({ currency: req.query.currency });
+            if (foundExchangeRate) {
+                exchangeRate = foundExchangeRate;
+                currencySymbol = exchangeRate.symbol || req.query.currency;
+            } else {
+                return res.status(400).send({ msg: 'Currency not supported' });
+            }
+        }
+
+        // Adjust product prices based on exchange rate
+        products.forEach(product => {
+            product.variants.forEach(variant => {
+                const indianMRP = variant.price || 0;
+                const indianSaleMRP = variant.salePrice || 0;
+                const margin = variant.margin / 100 || 0.01;
+
+                if (exchangeRate.rate !== 1) { // Not INR
+                    const priceWithMargin = indianMRP * (1 + margin);
+                    const salePriceWithMargin = indianSaleMRP * (1 + margin);
+                    variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
+                    variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
+                } else { // for INR
+                    variant.price = Number(indianMRP.toFixed(2));
+                    variant.salePrice = Number(indianSaleMRP.toFixed(2));
+                }
+                variant.currency = currencySymbol; // Set the currency symbol
+            });
+        });
+
+        category.products = products;
+
         if (category.parent) {
             const parentData = await Category.findById(category.parent);
             if (!parentData) {
@@ -456,6 +495,8 @@ categoryRoute.get('/:id', async (req, res) => {
             category.parentSlug = parentData.slug;
             return res.status(200).send(category);
         }
+
+
         return res.status(200).send(category);
     } catch (error) {
         console.error('Error fetching category:', error);
@@ -472,6 +513,45 @@ categoryRoute.get('/slug/:slug', async (req, res) => {
             return res.status(404).send({ msg: 'Category not found' });
         }
         category = category.toObject();
+
+        const products = await ProductModel.find({ genericID: id }).lean();
+
+        // Fetch exchange rate based on user's country and convert prices
+        let exchangeRate = { rate: 1 };
+        let currencySymbol = "₹";
+
+        if (req.query.currency && req.query.currency !== 'INR') {
+            const foundExchangeRate = await ExchangeRate.findOne({ currency: req.query.currency });
+            if (foundExchangeRate) {
+                exchangeRate = foundExchangeRate;
+                currencySymbol = exchangeRate.symbol || req.query.currency;
+            } else {
+                return res.status(400).send({ msg: 'Currency not supported' });
+            }
+        }
+
+        // Adjust product prices based on exchange rate
+        products.forEach(product => {
+            product.variants.forEach(variant => {
+                const indianMRP = variant.price || 0;
+                const indianSaleMRP = variant.salePrice || 0;
+                const margin = variant.margin / 100 || 0.01;
+
+                if (exchangeRate.rate !== 1) { // Not INR
+                    const priceWithMargin = indianMRP * (1 + margin);
+                    const salePriceWithMargin = indianSaleMRP * (1 + margin);
+                    variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
+                    variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
+                } else { // for INR
+                    variant.price = Number(indianMRP.toFixed(2));
+                    variant.salePrice = Number(indianSaleMRP.toFixed(2));
+                }
+                variant.currency = currencySymbol; // Set the currency symbol
+            });
+        });
+
+        generic.products = products;
+
         if (category.parent) {
             const parentData = await Category.findById(category.parent);
             if (!parentData) {
