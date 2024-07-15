@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const GenericModel = require('../models/genericModel');
 const ProductModel = require('../models/productModel');
 const verifyToken = require('../middlewares/auth');
+const ExchangeRate = require('../models/currencyPriceModel');
 
 
 async function createSlug(text) {
@@ -85,7 +86,42 @@ genericRoute.get('/:id', async (req, res) => {
             return res.status(404).json({ msg: 'Generic not found' });
         }
 
-        const products = await ProductModel.find({ genericID: id });
+        const products = await ProductModel.find({ genericID: id }).lean();
+
+        // Fetch exchange rate based on user's country and convert prices
+        let exchangeRate = { rate: 1 };
+        let currencySymbol = "₹";
+
+        if (req.query.currency && req.query.currency !== 'INR') {
+            const foundExchangeRate = await ExchangeRate.findOne({ currency: req.query.currency });
+            if (foundExchangeRate) {
+                exchangeRate = foundExchangeRate;
+                currencySymbol = exchangeRate.symbol || req.query.currency;
+            } else {
+                return res.status(400).send({ msg: 'Currency not supported' });
+            }
+        }
+
+        // Adjust product prices based on exchange rate
+        products.forEach(product => {
+            product.variants.forEach(variant => {
+                const indianMRP = variant.price || 0;
+                const indianSaleMRP = variant.salePrice || 0;
+                const margin = variant.margin / 100 || 0.01;
+
+                if (exchangeRate.rate !== 1) { // Not INR
+                    const priceWithMargin = indianMRP * (1 + margin);
+                    const salePriceWithMargin = indianSaleMRP * (1 + margin);
+                    variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
+                    variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
+                } else { // for INR
+                    variant.price = Number(indianMRP.toFixed(2));
+                    variant.salePrice = Number(indianSaleMRP.toFixed(2));
+                }
+                variant.currency = currencySymbol; // Set the currency symbol
+            });
+        });
+
         generic.products = products;
 
         return res.status(200).json({ msg: 'Success', data: generic });
@@ -94,6 +130,7 @@ genericRoute.get('/:id', async (req, res) => {
         return res.status(500).json({ msg: 'Internal server error, try again later' });
     }
 });
+
 
 // POST a new generic
 genericRoute.post('/', validateGeneric, verifyToken, async (req, res) => {

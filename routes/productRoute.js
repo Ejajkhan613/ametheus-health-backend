@@ -417,10 +417,43 @@ productRoute.get('/', async (req, res) => {
 // Route to fetch a single product by ID
 productRoute.get('/:id', async (req, res) => {
     try {
-        const product = await ProductModel.findById(req.params.id);
+        const product = await ProductModel.findById(req.params.id).lean();
         if (!product) {
             return res.status(404).send({ msg: 'Product not found' });
         }
+
+        // Fetch exchange rate based on user's country and convert prices
+        let exchangeRate = { rate: 1 };
+        let currencySymbol = "₹";
+
+        if (req.query.currency && req.query.currency !== 'INR') {
+            const foundExchangeRate = await ExchangeRate.findOne({ currency: req.query.currency });
+            if (foundExchangeRate) {
+                exchangeRate = foundExchangeRate;
+                currencySymbol = exchangeRate.symbol || req.query.currency;
+            } else {
+                return res.status(400).send({ msg: 'Currency not supported' });
+            }
+        }
+
+        // Adjust product prices based on exchange rate
+        product.variants.forEach(variant => {
+            const indianMRP = variant.price || 0;
+            const indianSaleMRP = variant.salePrice || 0;
+            const margin = variant.margin / 100 || 0.01;
+
+            if (exchangeRate.rate !== 1) { // Not INR
+                const priceWithMargin = indianMRP * (1 + margin);
+                const salePriceWithMargin = indianSaleMRP * (1 + margin);
+                variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
+                variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
+            } else { // For INR
+                variant.price = Number(indianMRP.toFixed(2));
+                variant.salePrice = Number(indianSaleMRP.toFixed(2));
+            }
+            variant.currency = currencySymbol; // Set the currency symbol
+        });
+
         res.status(200).send({ msg: 'Success', data: product });
     } catch (error) {
         console.error('Error fetching product:', error);
@@ -428,7 +461,7 @@ productRoute.get('/:id', async (req, res) => {
     }
 });
 
-// Route to fetch a single product by ID
+// Route to fetch products by category ID
 productRoute.get('/category/:id', async (req, res) => {
     try {
         const product = await ProductModel.find({ categoryID: req.params.id });
