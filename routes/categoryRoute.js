@@ -309,7 +309,7 @@ categoryRoute.get('/view', async (req, res) => {
             categories = await Category.aggregate([
                 {
                     $lookup: {
-                        from: 'products'
+                        from: 'products',
                         localField: '_id',
                         foreignField: 'categoryID',
                         as: 'products'
