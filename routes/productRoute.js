@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const fileUpload = require('express-fileupload');
 const xlsx = require('xlsx');
 const { check, validationResult } = require('express-validator');
@@ -321,8 +322,6 @@ productRoute.delete('/:id', verifyToken, async (req, res) => {
     }
 });
 
-const mongoose = require('mongoose');
-
 // Route to fetch all products with pagination, filtering, and sorting
 productRoute.get('/', async (req, res) => {
     try {
@@ -345,7 +344,9 @@ productRoute.get('/', async (req, res) => {
                 { slug: new RegExp(search, 'i') },
                 { treatment: new RegExp(search, 'i') },
                 { originCountry: new RegExp(search, 'i') },
-                { tags: new RegExp(search, 'i') }
+                { tags: new RegExp(search, 'i') },
+                { 'variants.sku': new RegExp(search, 'i') },
+                { 'variants.packSize': new RegExp(search, 'i') }
             ];
             if (isValidObjectId(search)) {
                 filters.$or.push({ genericID: search });
@@ -434,6 +435,7 @@ productRoute.get('/', async (req, res) => {
         res.status(500).send({ msg: 'Internal server error, try again later' });
     }
 });
+
 
 
 // Route to fetch a single product by ID
