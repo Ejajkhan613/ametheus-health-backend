@@ -309,7 +309,7 @@ categoryRoute.get('/view', async (req, res) => {
             categories = await Category.aggregate([
                 {
                     $lookup: {
-                        from: 'products', // ensure this matches the actual collection name
+                        from: 'products',
                         localField: '_id',
                         foreignField: 'categoryID',
                         as: 'products'
@@ -327,6 +327,13 @@ categoryRoute.get('/view', async (req, res) => {
         } else {
             categories = await Category.find().select('name');
         }
+
+        if (!categories.length) {
+            return res.status(404).send({ msg: 'No categories found' });
+        }
+
+        // Add some debug information
+        console.log('Categories fetched:', categories);
 
         return res.status(200).send(categories);
     } catch (error) {
