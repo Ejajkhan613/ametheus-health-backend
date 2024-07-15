@@ -309,7 +309,7 @@ categoryRoute.get('/view', async (req, res) => {
             categories = await Category.aggregate([
                 {
                     $lookup: {
-                        from: 'products',
+                        from: 'products'
                         localField: '_id',
                         foreignField: 'categoryID',
                         as: 'products'
@@ -320,27 +320,13 @@ categoryRoute.get('/view', async (req, res) => {
                         name: 1,
                         image: 1,
                         slug: 1,
-                        productsCount: { $size: '$products' }
+                        products: { $size: '$products' }
                     }
                 }
             ]);
-
-            // Debug: Check if products are correctly matched with categories
-            const products = await ProductModel.find({});
-            console.log('All products:', products);
-            const categoryIds = categories.map(cat => cat._id);
-            const unmatchedProducts = products.filter(prod => !categoryIds.includes(prod.categoryID));
-            console.log('Unmatched products:', unmatchedProducts);
         } else {
             categories = await Category.find().select('name');
         }
-
-        if (!categories.length) {
-            return res.status(404).send({ msg: 'No categories found' });
-        }
-
-        // Add some debug information
-        console.log('Categories fetched:', categories);
 
         return res.status(200).send(categories);
     } catch (error) {
