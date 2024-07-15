@@ -299,10 +299,34 @@ categoryRoute.patch('/:id', [
 });
 
 
-// Get All Categories only name and id
+// Get All Categories with conditional fields
 categoryRoute.get('/view', async (req, res) => {
     try {
-        const categories = await Category.find().select('name');
+        const { data } = req.query;
+
+        let categories;
+        if (data === 'all') {
+            categories = await Category.aggregate([
+                {
+                    $lookup: {
+                        from: 'products',
+                        localField: '_id',
+                        foreignField: 'categoryID',
+                        as: 'products'
+                    }
+                },
+                {
+                    $project: {
+                        name: 1,
+                        image: 1,
+                        totalProductsCount: { $size: '$products' }
+                    }
+                }
+            ]);
+        } else {
+            categories = await Category.find().select('name');
+        }
+
         return res.status(200).send(categories);
     } catch (error) {
         console.error('Error fetching categories:', error);
