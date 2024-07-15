@@ -351,6 +351,7 @@ productRoute.get('/', async (req, res) => {
                 filters.$or.push({ genericID: search });
                 filters.$or.push({ categoryID: search });
                 filters.$or.push({ manufacturerID: search });
+                filters.$or.push({ _id: search });
             }
         }
 
