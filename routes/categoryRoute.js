@@ -414,6 +414,7 @@ categoryRoute.get('/hierarchy-names', async (req, res) => {
             categoryMap[category._id] = {
                 _id: category._id,
                 name: category.name,
+                slug: category.slug,
                 children: []
             };
         });
