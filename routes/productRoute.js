@@ -321,12 +321,15 @@ productRoute.delete('/:id', verifyToken, async (req, res) => {
     }
 });
 
+const mongoose = require('mongoose');
+
 // Route to fetch all products with pagination, filtering, and sorting
 productRoute.get('/', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
+        const { search = '' } = req.query;
 
         const filters = {};
         const {
@@ -334,16 +337,33 @@ productRoute.get('/', async (req, res) => {
             categoryID, manufacturerID, tags, originCountry, isVisible
         } = req.query;
 
+        const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+        if (search) {
+            filters.$or = [
+                { title: new RegExp(search, 'i') },
+                { slug: new RegExp(search, 'i') },
+                { treatment: new RegExp(search, 'i') },
+                { originCountry: new RegExp(search, 'i') },
+                { tags: new RegExp(search, 'i') }
+            ];
+            if (isValidObjectId(search)) {
+                filters.$or.push({ genericID: search });
+                filters.$or.push({ categoryID: search });
+                filters.$or.push({ manufacturerID: search });
+            }
+        }
+
         if (title) filters.title = new RegExp(title, 'i');
         if (slug) filters.slug = new RegExp(slug, 'i');
         if (sku) filters['variants.sku'] = new RegExp(sku, 'i');
-        if (genericID) filters.genericID = genericID;
+        if (genericID && isValidObjectId(genericID)) filters.genericID = genericID;
         if (treatment) filters.treatment = new RegExp(treatment, 'i');
         if (minPrice) filters['variants.price'] = { ...filters['variants.price'], $gte: parseFloat(minPrice) };
         if (maxPrice) filters['variants.price'] = { ...filters['variants.price'], $lte: parseFloat(maxPrice) };
         if (packSize) filters['variants.packSize'] = packSize;
-        if (categoryID) filters.categoryID = categoryID;
-        if (manufacturerID) filters.manufacturerID = manufacturerID;
+        if (categoryID && isValidObjectId(categoryID)) filters.categoryID = categoryID;
+        if (manufacturerID && isValidObjectId(manufacturerID)) filters.manufacturerID = manufacturerID;
         if (tags) filters.tags = new RegExp(tags, 'i');
         if (originCountry) filters.originCountry = originCountry;
         if (isVisible) filters.isVisible = isVisible === 'true';
@@ -413,6 +433,7 @@ productRoute.get('/', async (req, res) => {
         res.status(500).send({ msg: 'Internal server error, try again later' });
     }
 });
+
 
 // Route to fetch a single product by ID
 productRoute.get('/:id', async (req, res) => {
