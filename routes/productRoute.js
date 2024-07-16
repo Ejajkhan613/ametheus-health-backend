@@ -548,8 +548,8 @@ productRoute.get('/:id', async (req, res) => {
                     variant.salePrice = Number(indianSaleMRP.toFixed(2));
                 }
             } else { // OUTSIDE INDIA
-                console.log("PRICE", priceWithMargin);
-                console.log("SALEPRICE", salePriceWithMargin);
+                console.log("PRICE", variant.price);
+                console.log("SALEPRICE", variant.salePrice);
 
                 const priceWithMargin = indianMRP * (1 + margin);
                 const salePriceWithMargin = indianSaleMRP * (1 + margin);

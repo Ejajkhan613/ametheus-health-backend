@@ -139,7 +139,6 @@ genericRoute.get('/:id', async (req, res) => {
     }
 });
 
-
 // POST a new generic
 genericRoute.post('/', validateGeneric, verifyToken, async (req, res) => {
     if (req.userDetail.role !== "admin") {
