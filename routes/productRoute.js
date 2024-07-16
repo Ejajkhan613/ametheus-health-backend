@@ -349,15 +349,18 @@ productRoute.get('/search/', async (req, res) => {
             }
         }
 
-        // Fetch exchange rate based on user's country and convert prices
+        // Fetch exchange rate based on user's selected currency
         let exchangeRate = { rate: 1 };
         let currencySymbol = "₹";
 
-        if (req.query.currency && req.query.currency !== 'INR') {
-            const foundExchangeRate = await ExchangeRate.findOne({ currency: req.query.currency });
+        const country = req.query.country || 'INDIA';
+        const currency = req.query.currency || 'INR';
+
+        if (currency !== 'INR') {
+            const foundExchangeRate = await ExchangeRate.findOne({ currency });
             if (foundExchangeRate) {
                 exchangeRate = foundExchangeRate;
-                currencySymbol = exchangeRate.symbol || req.query.currency;
+                currencySymbol = exchangeRate.symbol || currency;
             } else {
                 return res.status(400).send({ msg: 'Currency not supported' });
             }
@@ -365,24 +368,29 @@ productRoute.get('/search/', async (req, res) => {
 
         const products = await ProductModel.find(filters)
             .collation({ locale: 'en', strength: 2 })
-            .lean();
+            .lean(); // Use lean() to get plain JavaScript objects for easier manipulation
 
-        // Adjust product prices based on exchange rate
+        // Adjust product prices based on exchange rate and country selection
         products.forEach(product => {
             product.variants.forEach(variant => {
                 const indianMRP = variant.price || 0;
                 const indianSaleMRP = variant.salePrice || 0;
                 const margin = variant.margin / 100 || 0.01;
 
-                if (exchangeRate.rate !== 1) { // Not INR
+                if (country === 'INDIA') {
+                    if (exchangeRate.rate !== 1) { // Currency other than INR
+                        variant.price = Number((indianMRP * exchangeRate.rate).toFixed(2));
+                        variant.salePrice = Number((indianSaleMRP * exchangeRate.rate).toFixed(2));
+                    } else {
+                        variant.price = Number(indianMRP.toFixed(2));
+                        variant.salePrice = Number(indianSaleMRP.toFixed(2));
+                    }
+                } else { // OUTSIDE INDIA
                     const priceWithMargin = indianMRP * (1 + margin);
                     const salePriceWithMargin = indianSaleMRP * (1 + margin);
+
                     variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
                     variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
-                } else {
-                    // No additional markup for INR
-                    variant.price = Number(indianMRP.toFixed(2));
-                    variant.salePrice = Number(indianSaleMRP.toFixed(2));
                 }
                 variant.currency = currencySymbol; // Set the currency symbol
             });
@@ -398,7 +406,7 @@ productRoute.get('/search/', async (req, res) => {
     }
 });
 
-// Route to fetch all products with pagination, filtering, and sorting (currency added)
+// Route to fetch all products with pagination, filtering, sorting (currency added)
 productRoute.get('/', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -436,15 +444,18 @@ productRoute.get('/', async (req, res) => {
         const totalProducts = await ProductModel.countDocuments(filters);
         const totalPages = Math.ceil(totalProducts / limit);
 
-        // Fetch exchange rate based on user's country and convert prices
+        // Fetch exchange rate based on user's selected currency
         let exchangeRate = { rate: 1 };
         let currencySymbol = "₹";
 
-        if (req.query.currency && req.query.currency !== 'INR') {
-            const foundExchangeRate = await ExchangeRate.findOne({ currency: req.query.currency });
+        const country = req.query.country || 'INDIA';
+        const currency = req.query.currency || 'INR';
+
+        if (currency !== 'INR') {
+            const foundExchangeRate = await ExchangeRate.findOne({ currency });
             if (foundExchangeRate) {
                 exchangeRate = foundExchangeRate;
-                currencySymbol = exchangeRate.symbol || req.query.currency;
+                currencySymbol = exchangeRate.symbol || currency;
             } else {
                 return res.status(400).send({ msg: 'Currency not supported' });
             }
@@ -457,23 +468,27 @@ productRoute.get('/', async (req, res) => {
             .collation({ locale: 'en', strength: 2 })
             .lean(); // Use lean() to get plain JavaScript objects for easier manipulation
 
-        // Adjust product prices based on exchange rate
+        // Adjust product prices based on exchange rate and country selection
         products.forEach(product => {
             product.variants.forEach(variant => {
                 const indianMRP = variant.price || 0; // Replace with actual field name for Indian MRP
                 const indianSaleMRP = variant.salePrice || 0; // Replace with actual field name for Indian MRP
                 const margin = variant.margin / 100 || 0.01; // Default margin is 1% if not provided
 
-                if (exchangeRate.rate !== 1) { // Not INR
-                    // Apply margin markup for non-INR currencies
+                if (country === 'INDIA') {
+                    if (exchangeRate.rate !== 1) { // Currency other than INR
+                        variant.price = Number((indianMRP * exchangeRate.rate).toFixed(2));
+                        variant.salePrice = Number((indianSaleMRP * exchangeRate.rate).toFixed(2));
+                    } else {
+                        variant.price = Number(indianMRP.toFixed(2));
+                        variant.salePrice = Number(indianSaleMRP.toFixed(2));
+                    }
+                } else { // OUTSIDE INDIA
                     const priceWithMargin = indianMRP * (1 + margin);
                     const salePriceWithMargin = indianSaleMRP * (1 + margin);
+
                     variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
-                    variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2)); // Adjust sale price similarly if needed
-                } else {
-                    // No additional markup for INR
-                    variant.price = Number(indianMRP.toFixed(2));
-                    variant.salePrice = Number(indianSaleMRP.toFixed(2)); // Assuming sale price same as price for INR
+                    variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
                 }
                 variant.currency = currencySymbol; // Set the currency symbol
             });
@@ -501,34 +516,43 @@ productRoute.get('/:id', async (req, res) => {
             return res.status(404).send({ msg: 'Product not found' });
         }
 
-        // Fetch exchange rate based on user's country and convert prices
+        // Fetch exchange rate based on user's selected currency
         let exchangeRate = { rate: 1 };
         let currencySymbol = "₹";
 
-        if (req.query.currency && req.query.currency !== 'INR') {
-            const foundExchangeRate = await ExchangeRate.findOne({ currency: req.query.currency });
+        const country = req.query.country || 'INDIA';
+        const currency = req.query.currency || 'INR';
+
+        if (currency !== 'INR') {
+            const foundExchangeRate = await ExchangeRate.findOne({ currency });
             if (foundExchangeRate) {
                 exchangeRate = foundExchangeRate;
-                currencySymbol = exchangeRate.symbol || req.query.currency;
+                currencySymbol = exchangeRate.symbol || currency;
             } else {
                 return res.status(400).send({ msg: 'Currency not supported' });
             }
         }
 
-        // Adjust product prices based on exchange rate
+        // Adjust product prices based on exchange rate and country selection
         product.variants.forEach(variant => {
             const indianMRP = variant.price || 0;
             const indianSaleMRP = variant.salePrice || 0;
             const margin = variant.margin / 100 || 0.01;
 
-            if (exchangeRate.rate !== 1) { // Not INR
+            if (country === 'INDIA') {
+                if (exchangeRate.rate !== 1) { // Currency other than INR
+                    variant.price = Number((indianMRP * exchangeRate.rate).toFixed(2));
+                    variant.salePrice = Number((indianSaleMRP * exchangeRate.rate).toFixed(2));
+                } else {
+                    variant.price = Number(indianMRP.toFixed(2));
+                    variant.salePrice = Number(indianSaleMRP.toFixed(2));
+                }
+            } else { // OUTSIDE INDIA
                 const priceWithMargin = indianMRP * (1 + margin);
                 const salePriceWithMargin = indianSaleMRP * (1 + margin);
+
                 variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
                 variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
-            } else { // For INR
-                variant.price = Number(indianMRP.toFixed(2));
-                variant.salePrice = Number(indianSaleMRP.toFixed(2));
             }
             variant.currency = currencySymbol; // Set the currency symbol
         });
@@ -548,35 +572,44 @@ productRoute.get('/category/:id', async (req, res) => {
             return res.status(404).send({ msg: 'No products found for this category' });
         }
 
-        // Fetch exchange rate based on user's country and convert prices
+        // Fetch exchange rate based on user's selected currency
         let exchangeRate = { rate: 1 };
         let currencySymbol = "₹";
 
-        if (req.query.currency && req.query.currency !== 'INR') {
-            const foundExchangeRate = await ExchangeRate.findOne({ currency: req.query.currency });
+        const country = req.query.country || 'INDIA';
+        const currency = req.query.currency || 'INR';
+
+        if (currency !== 'INR') {
+            const foundExchangeRate = await ExchangeRate.findOne({ currency });
             if (foundExchangeRate) {
                 exchangeRate = foundExchangeRate;
-                currencySymbol = exchangeRate.symbol || req.query.currency;
+                currencySymbol = exchangeRate.symbol || currency;
             } else {
                 return res.status(400).send({ msg: 'Currency not supported' });
             }
         }
 
-        // Adjust product prices based on exchange rate
+        // Adjust product prices based on exchange rate and country selection
         products.forEach(product => {
             product.variants.forEach(variant => {
                 const indianMRP = variant.price || 0;
                 const indianSaleMRP = variant.salePrice || 0;
                 const margin = variant.margin / 100 || 0.01;
 
-                if (exchangeRate.rate !== 1) { // Not INR
+                if (country === 'INDIA') {
+                    if (exchangeRate.rate !== 1) { // Currency other than INR
+                        variant.price = Number((indianMRP * exchangeRate.rate).toFixed(2));
+                        variant.salePrice = Number((indianSaleMRP * exchangeRate.rate).toFixed(2));
+                    } else {
+                        variant.price = Number(indianMRP.toFixed(2));
+                        variant.salePrice = Number(indianSaleMRP.toFixed(2));
+                    }
+                } else { // OUTSIDE INDIA
                     const priceWithMargin = indianMRP * (1 + margin);
                     const salePriceWithMargin = indianSaleMRP * (1 + margin);
+
                     variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
                     variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
-                } else { // For INR
-                    variant.price = Number(indianMRP.toFixed(2));
-                    variant.salePrice = Number(indianSaleMRP.toFixed(2));
                 }
                 variant.currency = currencySymbol; // Set the currency symbol
             });

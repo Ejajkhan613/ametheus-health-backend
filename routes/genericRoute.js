@@ -167,9 +167,12 @@ genericRoute.patch('/:id', validateGeneric, verifyToken, async (req, res) => {
 
     try {
         const { id } = req.params;
+
+        const oldGenericData = await GenericModel.findById(id);
+
         const updates = req.body;
 
-        if (updates.name) {
+        if (updates.name && oldGenericData.name !== updates.name) {
             updates.slug = await createSlug(updates.name);
         }
 
