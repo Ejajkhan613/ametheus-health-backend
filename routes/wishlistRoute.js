@@ -96,8 +96,8 @@ wishlistRoute.get('/', verifyToken, async (req, res) => {
             const margin = item.productID.variants.find(v => v._id.equals(item.variantID)).margin / 100 || 0.01;
 
             if (exchangeRate.rate !== 1) { // Not INR
-                const priceWithMargin = indianMRP * margin;
-                const salePriceWithMargin = indianSaleMRP * margin;
+                const priceWithMargin = indianMRP * (1 + margin);
+                const salePriceWithMargin = indianSaleMRP * (1 + margin);
                 item.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
                 item.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
             } else { // For INR

@@ -386,8 +386,8 @@ productRoute.get('/search/', async (req, res) => {
                         variant.salePrice = Number(indianSaleMRP.toFixed(2));
                     }
                 } else { // OUTSIDE INDIA
-                    const priceWithMargin = indianMRP * margin;
-                    const salePriceWithMargin = indianSaleMRP * margin;
+                    const priceWithMargin = indianMRP * (1 + margin);
+                    const salePriceWithMargin = indianSaleMRP * (1 + margin);
 
                     variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
                     variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
@@ -484,8 +484,8 @@ productRoute.get('/', async (req, res) => {
                         variant.salePrice = Number(indianSaleMRP.toFixed(2));
                     }
                 } else { // OUTSIDE INDIA
-                    const priceWithMargin = indianMRP * margin;
-                    const salePriceWithMargin = indianSaleMRP * margin;
+                    const priceWithMargin = indianMRP * (1 + margin);
+                    const salePriceWithMargin = indianSaleMRP * (1 + margin);
 
                     variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
                     variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
@@ -548,8 +548,8 @@ productRoute.get('/:id', async (req, res) => {
                     variant.salePrice = Number(indianSaleMRP.toFixed(2));
                 }
             } else { // OUTSIDE INDIA
-                const priceWithMargin = indianMRP * margin;
-                const salePriceWithMargin = indianSaleMRP * margin;
+                const priceWithMargin = indianMRP * (1 + margin);
+                const salePriceWithMargin = indianSaleMRP * (1 + margin);
 
                 variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
                 variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
@@ -605,8 +605,8 @@ productRoute.get('/category/:id', async (req, res) => {
                         variant.salePrice = Number(indianSaleMRP.toFixed(2));
                     }
                 } else { // OUTSIDE INDIA
-                    const priceWithMargin = indianMRP * margin;
-                    const salePriceWithMargin = indianSaleMRP * margin;
+                    const priceWithMargin = indianMRP * (1 + margin);
+                    const salePriceWithMargin = indianSaleMRP * (1 + margin);
 
                     variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
                     variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
@@ -662,8 +662,8 @@ productRoute.get('/slug/:slug', async (req, res) => {
                     variant.salePrice = Number(indianSaleMRP.toFixed(2));
                 }
             } else { // OUTSIDE INDIA
-                const priceWithMargin = indianMRP * margin;
-                const salePriceWithMargin = indianSaleMRP * margin;
+                const priceWithMargin = indianMRP * (1 + margin);
+                const salePriceWithMargin = indianSaleMRP * (1 + margin);
 
                 variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
                 variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
