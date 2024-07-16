@@ -322,7 +322,7 @@ productRoute.delete('/:id', verifyToken, async (req, res) => {
     }
 });
 
-// Route to fetch all products with pagination, filtering, and sorting
+// Route to fetch all products with pagination, filtering, and sorting (currency added)
 productRoute.get('/search/', async (req, res) => {
     try {
         const { search = '' } = req.query;
@@ -398,7 +398,7 @@ productRoute.get('/search/', async (req, res) => {
     }
 });
 
-// Route to fetch all products with pagination, filtering, and sorting
+// Route to fetch all products with pagination, filtering, and sorting (currency added)
 productRoute.get('/', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -493,9 +493,7 @@ productRoute.get('/', async (req, res) => {
     }
 });
 
-
-
-// Route to fetch a single product by ID
+// Route to fetch a single product by ID (currency added)
 productRoute.get('/:id', async (req, res) => {
     try {
         const product = await ProductModel.findById(req.params.id).lean();
@@ -542,24 +540,95 @@ productRoute.get('/:id', async (req, res) => {
     }
 });
 
-// Route to fetch products by category ID
+// Route to fetch products by category ID (currency added)
 productRoute.get('/category/:id', async (req, res) => {
     try {
-        const product = await ProductModel.find({ categoryID: req.params.id });
-        res.status(200).send({ msg: 'Success', data: product });
+        const products = await ProductModel.find({ categoryID: req.params.id }).lean();
+        if (!products || products.length === 0) {
+            return res.status(404).send({ msg: 'No products found for this category' });
+        }
+
+        // Fetch exchange rate based on user's country and convert prices
+        let exchangeRate = { rate: 1 };
+        let currencySymbol = "₹";
+
+        if (req.query.currency && req.query.currency !== 'INR') {
+            const foundExchangeRate = await ExchangeRate.findOne({ currency: req.query.currency });
+            if (foundExchangeRate) {
+                exchangeRate = foundExchangeRate;
+                currencySymbol = exchangeRate.symbol || req.query.currency;
+            } else {
+                return res.status(400).send({ msg: 'Currency not supported' });
+            }
+        }
+
+        // Adjust product prices based on exchange rate
+        products.forEach(product => {
+            product.variants.forEach(variant => {
+                const indianMRP = variant.price || 0;
+                const indianSaleMRP = variant.salePrice || 0;
+                const margin = variant.margin / 100 || 0.01;
+
+                if (exchangeRate.rate !== 1) { // Not INR
+                    const priceWithMargin = indianMRP * (1 + margin);
+                    const salePriceWithMargin = indianSaleMRP * (1 + margin);
+                    variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
+                    variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
+                } else { // For INR
+                    variant.price = Number(indianMRP.toFixed(2));
+                    variant.salePrice = Number(indianSaleMRP.toFixed(2));
+                }
+                variant.currency = currencySymbol; // Set the currency symbol
+            });
+        });
+
+        res.status(200).send({ msg: 'Success', data: products });
     } catch (error) {
-        console.error('Error fetching product:', error);
+        console.error('Error fetching products:', error);
         res.status(500).send({ msg: 'Internal server error, try again later' });
     }
 });
 
-// Route to fetch a single product by slug
+// Route to fetch a single product by slug (currency added)
 productRoute.get('/slug/:slug', async (req, res) => {
     try {
-        const product = await ProductModel.findOne({ 'slug': req.params.slug });
+        const product = await ProductModel.findOne({ 'slug': req.params.slug }).lean();
         if (!product) {
             return res.status(404).send({ msg: 'Product not found' });
         }
+
+        // Fetch exchange rate based on user's country and convert prices
+        let exchangeRate = { rate: 1 };
+        let currencySymbol = "₹";
+
+        if (req.query.currency && req.query.currency !== 'INR') {
+            const foundExchangeRate = await ExchangeRate.findOne({ currency: req.query.currency });
+            if (foundExchangeRate) {
+                exchangeRate = foundExchangeRate;
+                currencySymbol = exchangeRate.symbol || req.query.currency;
+            } else {
+                return res.status(400).send({ msg: 'Currency not supported' });
+            }
+        }
+
+        // Adjust product prices based on exchange rate
+        product.variants.forEach(variant => {
+            const indianMRP = variant.price || 0;
+            const indianSaleMRP = variant.salePrice || 0;
+            const margin = variant.margin / 100 || 0.01;
+
+            if (exchangeRate.rate !== 1) { // Not INR
+                const priceWithMargin = indianMRP * (1 + margin);
+                const salePriceWithMargin = indianSaleMRP * (1 + margin);
+                variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
+                variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
+            } else { // For INR
+                variant.price = Number(indianMRP.toFixed(2));
+                variant.salePrice = Number(indianSaleMRP.toFixed(2));
+            }
+            variant.currency = currencySymbol; // Set the currency symbol
+        });
+
         res.status(200).send({ msg: 'Success', data: product });
     } catch (error) {
         console.error('Error fetching product:', error);

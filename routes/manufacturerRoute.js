@@ -139,7 +139,7 @@ manufacturerRouter.delete('/:id', verifyToken, async (req, res) => {
 });
 
 
-// Get all products for a specific manufacturer
+// Get all products for a specific manufacturer (currency added)
 manufacturerRouter.get('/:id/product', async (req, res) => {
     try {
         const manufacturerID = req.params.id;
@@ -147,7 +147,44 @@ manufacturerRouter.get('/:id/product', async (req, res) => {
         if (!manufacturer) {
             return res.status(404).json({ msg: 'Manufacturer not found' });
         }
+
+        // Fetch exchange rate based on user's country and convert prices
+        let exchangeRate = { rate: 1 };
+        let currencySymbol = "₹";
+
+        if (req.query.currency && req.query.currency !== 'INR') {
+            const foundExchangeRate = await ExchangeRate.findOne({ currency: req.query.currency });
+            if (foundExchangeRate) {
+                exchangeRate = foundExchangeRate;
+                currencySymbol = exchangeRate.symbol || req.query.currency;
+            } else {
+                return res.status(400).json({ msg: 'Currency not supported' });
+            }
+        }
+
+        // Fetch products for the manufacturer
         const products = await ProductModel.find({ manufacturerID });
+
+        // Adjust prices in products based on exchange rate
+        products.forEach(product => {
+            product.variants.forEach(variant => {
+                const indianMRP = variant.price || 0;
+                const indianSaleMRP = variant.salePrice || 0;
+                const margin = variant.margin / 100 || 0.01;
+
+                if (exchangeRate.rate !== 1) { // Not INR
+                    const priceWithMargin = indianMRP * (1 + margin);
+                    const salePriceWithMargin = indianSaleMRP * (1 + margin);
+                    variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
+                    variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
+                } else { // For INR
+                    variant.price = Number(indianMRP.toFixed(2));
+                    variant.salePrice = Number(indianSaleMRP.toFixed(2));
+                }
+                variant.currency = currencySymbol; // Set the currency symbol
+            });
+        });
+
         res.status(200).json({ msg: 'Success', data: products });
     } catch (error) {
         console.error('Error fetching products for manufacturer:', error);

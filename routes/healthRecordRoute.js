@@ -268,8 +268,4 @@ healthRecordRouter.delete('/:id', verifyToken, async (req, res) => {
 });
 
 
-
-
-
-
 module.exports = healthRecordRouter;

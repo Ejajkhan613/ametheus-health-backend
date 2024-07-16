@@ -9,6 +9,7 @@ const Category = require('../models/categoryModel');
 const categorySlugify = require('../utils/categorySlugify');
 const ExchangeRate = require('../models/currencyPriceModel');
 const ProductModel = require('../models/productModel');
+const verifyToken = require('../middlewares/auth');
 
 const categoryRoute = express.Router();
 
@@ -62,7 +63,7 @@ categoryRoute.post('/', [
     body('name').notEmpty().withMessage('Category name is required'),
     body('description').optional().isString(),
     body('parent').optional().isMongoId().withMessage('Parent must be a valid category ID')
-], async (req, res) => {
+], verifyToken, async (req, res) => {
     if (req.userDetail.role !== "admin") {
         return res.status(400).json({ msg: 'Access Denied' });
     }
@@ -96,7 +97,7 @@ categoryRoute.post('/', [
 });
 
 // Add Image to Category
-categoryRoute.patch('/:id/image', upload.single('image'), async (req, res) => {
+categoryRoute.patch('/:id/image', verifyToken, upload.single('image'), async (req, res) => {
     if (req.userDetail.role !== "admin") {
         return res.status(400).json({ msg: 'Access Denied' });
     }
@@ -124,7 +125,7 @@ categoryRoute.patch('/:id/image', upload.single('image'), async (req, res) => {
 });
 
 // Delete Image from Category
-categoryRoute.delete('/:id/image', async (req, res) => {
+categoryRoute.delete('/:id/image', verifyToken, async (req, res) => {
     if (req.userDetail.role !== "admin") {
         return res.status(400).json({ msg: 'Access Denied' });
     }
@@ -152,7 +153,7 @@ categoryRoute.delete('/:id/image', async (req, res) => {
 });
 
 // Add Document to Category
-categoryRoute.patch('/:id/docFile', upload.single('file'), async (req, res) => {
+categoryRoute.patch('/:id/docFile', verifyToken, upload.single('file'), async (req, res) => {
     if (req.userDetail.role !== "admin") {
         return res.status(400).json({ msg: 'Access Denied' });
     }
@@ -180,7 +181,7 @@ categoryRoute.patch('/:id/docFile', upload.single('file'), async (req, res) => {
 });
 
 // Delete Document from Category
-categoryRoute.delete('/:id/docFile', async (req, res) => {
+categoryRoute.delete('/:id/docFile', verifyToken, async (req, res) => {
     if (req.userDetail.role !== "admin") {
         return res.status(400).json({ msg: 'Access Denied' });
     }
@@ -208,7 +209,7 @@ categoryRoute.delete('/:id/docFile', async (req, res) => {
 });
 
 // Update Category (excluding image and docFileURL)
-categoryRoute.patch('/:id', [
+categoryRoute.patch('/:id', verifyToken, [
     body('name').optional().isString().withMessage('Category name must be a string'),
     body('description').optional().isString(),
     body('parent').optional().custom(value => {
@@ -316,11 +317,26 @@ categoryRoute.get('/view', async (req, res) => {
                     }
                 },
                 {
+                    $unwind: {
+                        path: '$products',
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $group: {
+                        _id: '$_id',
+                        name: { $first: '$name' },
+                        image: { $first: '$image' },
+                        slug: { $first: '$slug' },
+                        productCount: { $sum: { $cond: [{ $ifNull: ['$products', false] }, 1, 0] } }
+                    }
+                },
+                {
                     $project: {
                         name: 1,
                         image: 1,
                         slug: 1,
-                        products: { $size: '$products' }
+                        productCount: 1
                     }
                 }
             ]);
@@ -465,7 +481,7 @@ categoryRoute.get('/hierarchy-names', async (req, res) => {
     }
 });
 
-// Get Category by its id
+// Get Category by its id (currency added)
 categoryRoute.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -531,7 +547,7 @@ categoryRoute.get('/:id', async (req, res) => {
     }
 });
 
-// Get Category by its slug
+// Get Category by its slug (currency added)
 categoryRoute.get('/slug/:slug', async (req, res) => {
     try {
         const { slug } = req.params;
@@ -596,7 +612,7 @@ categoryRoute.get('/slug/:slug', async (req, res) => {
 });
 
 // Delete Category along with Image and Document
-categoryRoute.delete('/:id', async (req, res) => {
+categoryRoute.delete('/:id', verifyToken, async (req, res) => {
     if (req.userDetail.role !== "admin") {
         return res.status(400).json({ msg: 'Access Denied' });
     }

@@ -3,9 +3,10 @@ const express = require('express');
 const mongoose = require('mongoose');
 const currencyRouter = express.Router();
 const ExchangeRate = require('../models/currencyPriceModel');
+const verifyToken = require('../middlewares/auth');
 
 // Get all exchange rates
-currencyRouter.get('/exchange-rates', async (req, res) => {
+currencyRouter.get('/exchange-rates', verifyToken, async (req, res) => {
     try {
         const rates = await ExchangeRate.find();
         res.status(200).json(rates);
@@ -15,7 +16,7 @@ currencyRouter.get('/exchange-rates', async (req, res) => {
 });
 
 // Get a specific exchange rate
-currencyRouter.get('/exchange-rates/:currency', async (req, res) => {
+currencyRouter.get('/exchange-rates/:currency', verifyToken, async (req, res) => {
     try {
         const rate = await ExchangeRate.findOne({ currency: req.params.currency });
         if (!rate) {
@@ -28,7 +29,7 @@ currencyRouter.get('/exchange-rates/:currency', async (req, res) => {
 });
 
 // Create or update an exchange rate
-currencyRouter.post('/exchange-rates', async (req, res) => {
+currencyRouter.post('/exchange-rates', verifyToken, async (req, res) => {
     const { currency, rate } = req.body;
 
     try {
@@ -47,7 +48,7 @@ currencyRouter.post('/exchange-rates', async (req, res) => {
 });
 
 // Delete an exchange rate
-currencyRouter.delete('/exchange-rates/:currency', async (req, res) => {
+currencyRouter.delete('/exchange-rates/:currency', verifyToken, async (req, res) => {
     try {
         const rate = await ExchangeRate.findOneAndDelete({ currency: req.params.currency });
         if (!rate) {

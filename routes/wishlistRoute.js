@@ -65,7 +65,7 @@ wishlistRoute.delete('/', verifyToken, async (req, res) => {
     }
 });
 
-// Get user's wishlist
+// Get user's wishlist (currency added)
 wishlistRoute.get('/', verifyToken, async (req, res) => {
     const userID = req.userDetail._id;
 
@@ -75,11 +75,44 @@ wishlistRoute.get('/', verifyToken, async (req, res) => {
             return res.status(404).json({ msg: 'Wishlist not found' });
         }
 
+        // Fetch exchange rate based on user's country and convert prices
+        let exchangeRate = { rate: 1 };
+        let currencySymbol = "₹";
+
+        if (req.query.currency && req.query.currency !== 'INR') {
+            const foundExchangeRate = await ExchangeRate.findOne({ currency: req.query.currency });
+            if (foundExchangeRate) {
+                exchangeRate = foundExchangeRate;
+                currencySymbol = exchangeRate.symbol || req.query.currency;
+            } else {
+                return res.status(400).json({ msg: 'Currency not supported' });
+            }
+        }
+
+        // Adjust prices in wishlist items based on exchange rate
+        wishlist.items.forEach(item => {
+            const indianMRP = item.productID.variants.find(v => v._id.equals(item.variantID)).price || 0;
+            const indianSaleMRP = item.productID.variants.find(v => v._id.equals(item.variantID)).salePrice || 0;
+            const margin = item.productID.variants.find(v => v._id.equals(item.variantID)).margin / 100 || 0.01;
+
+            if (exchangeRate.rate !== 1) { // Not INR
+                const priceWithMargin = indianMRP * (1 + margin);
+                const salePriceWithMargin = indianSaleMRP * (1 + margin);
+                item.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
+                item.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
+            } else { // For INR
+                item.price = Number(indianMRP.toFixed(2));
+                item.salePrice = Number(indianSaleMRP.toFixed(2));
+            }
+            item.currency = currencySymbol; // Set the currency symbol
+        });
+
         res.status(200).json({ data: wishlist });
     } catch (error) {
         console.error('Error fetching wishlist:', error);
         res.status(500).json({ msg: 'Internal server error, try again later' });
     }
 });
+
 
 module.exports = wishlistRoute;

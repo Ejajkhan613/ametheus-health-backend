@@ -25,7 +25,6 @@ const UserModel = require('../models/userModel');
 const FamilyMemberModel = require('../models/familyModel');
 
 const userRouter = express.Router();
-// const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 
 // Rate limiter
