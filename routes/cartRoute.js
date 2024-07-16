@@ -151,11 +151,55 @@ cartRoute.delete('/remove-all', verifyToken, async (req, res) => {
     }
 });
 
-// Get cart items for user
+// Get cart items for user (currency added)
 cartRoute.get('/', verifyToken, async (req, res) => {
     try {
         const userID = req.userDetail._id;
         const cartItems = await CartItem.find({ userID }).populate('productID');
+
+        // Fetch exchange rate based on user's selected currency
+        let exchangeRate = { rate: 1 };
+        let currencySymbol = "₹";
+
+        const country = req.query.country || 'INDIA';
+        const currency = req.query.currency || 'INR';
+
+        if (currency !== 'INR') {
+            const foundExchangeRate = await ExchangeRate.findOne({ currency });
+            if (foundExchangeRate) {
+                exchangeRate = foundExchangeRate;
+                currencySymbol = exchangeRate.symbol || currency;
+            } else {
+                return res.status(400).send({ msg: 'Currency not supported' });
+            }
+        }
+
+        // Adjust prices of cart items based on exchange rate and country selection
+        cartItems.forEach(item => {
+            const product = item.productID;
+            const variant = product.variants.find(v => v._id.toString() === item.variantID.toString());
+
+            const indianMRP = variant.price || 0;
+            const indianSaleMRP = variant.salePrice || 0;
+            const margin = variant.margin / 100 || 0.01;
+
+            if (country === 'INDIA') {
+                if (exchangeRate.rate !== 1) { // Currency other than INR
+                    item.price = Number((indianMRP * exchangeRate.rate).toFixed(2));
+                    item.salePrice = Number((indianSaleMRP * exchangeRate.rate).toFixed(2));
+                } else {
+                    item.price = Number(indianMRP.toFixed(2));
+                    item.salePrice = Number(indianSaleMRP.toFixed(2));
+                }
+            } else { // OUTSIDE INDIA
+                const priceWithMargin = indianMRP * (1 + margin);
+                const salePriceWithMargin = indianSaleMRP * (1 + margin);
+
+                item.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
+                item.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
+            }
+            item.currency = currencySymbol; // Set the currency symbol
+        });
 
         res.status(200).send({ msg: 'Cart items fetched successfully', data: cartItems });
     } catch (error) {
