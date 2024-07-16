@@ -184,8 +184,8 @@ manufacturerRouter.get('/:id/product', async (req, res) => {
                         variant.salePrice = Number(indianSaleMRP.toFixed(2));
                     }
                 } else { // OUTSIDE INDIA
-                    const priceWithMargin = indianMRP * (1 + margin);
-                    const salePriceWithMargin = indianSaleMRP * (1 + margin);
+                    const priceWithMargin = indianMRP * margin;
+                    const salePriceWithMargin = indianSaleMRP * margin;
 
                     variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
                     variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
