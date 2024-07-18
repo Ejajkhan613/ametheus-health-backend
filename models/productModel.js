@@ -200,7 +200,7 @@ const productSchema = new mongoose.Schema({
         default: "Ametheus Health, Discreet Medicine Delivery, Medical Help, Doctor Consultation, Global Medicine Delivery, Medicines, Purchase, Health Record, My Health Record, Pharmacy, Online Pharmacy"
     },
     variants: [variantSchema]
-});
+}, { timestamps: true });
 
 const ProductModel = mongoose.model('Product', productSchema);
 
