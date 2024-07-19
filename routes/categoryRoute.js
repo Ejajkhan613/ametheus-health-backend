@@ -460,6 +460,7 @@ categoryRoute.get('/hierarchy-names', async (req, res) => {
                 _id: category._id,
                 name: category.name,
                 slug: category.slug,
+                image: category.image,
                 children: [],
                 productCount: 0
             };
