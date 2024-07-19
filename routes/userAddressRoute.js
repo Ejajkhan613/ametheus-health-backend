@@ -36,6 +36,7 @@ const validateAddress = [
     check('locality').notEmpty(),
     check('city').notEmpty(),
     check('state').notEmpty(),
+    check('country').notEmpty(),
     check('zipcode').notEmpty(),
     check('addressType').isIn(['HOME', 'OFFICE', 'OTHER']),
     check('mobileNumber').notEmpty(),
@@ -50,8 +51,11 @@ addressRouter.post('/', validateAddress, verifyToken, async (req, res) => {
     }
 
     try {
+        const body = req.body;
+        delete body.userId;
+
         const address = new Address({
-            ...req.body,
+            ...body,
             userId: req.userDetail._id
         });
         await address.save();
@@ -75,9 +79,12 @@ addressRouter.patch('/:id', validateAddress, verifyToken, async (req, res) => {
     }
 
     try {
+        const body = req.body;
+        delete body.userId;
+
         const address = await Address.findOneAndUpdate(
             { _id: req.params.id, userId: req.userDetail._id },
-            req.body,
+            body,
             { new: true }
         );
         if (!address) {

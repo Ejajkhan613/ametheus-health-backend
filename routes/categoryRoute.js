@@ -686,7 +686,7 @@ categoryRoute.delete('/:id', verifyToken, async (req, res) => {
                 parentCategory.children.pull(category._id);
                 await parentCategory.save();
             } else {
-                console.warn(`Parent category with id ${category.parent} not found`);
+                return res.status(404).send({ msg: `Parent category with id ${category.parent} not found` });
             }
         }
 

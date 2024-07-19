@@ -46,6 +46,10 @@ const generateKey = (originalname) => {
 const productRoute = express.Router();
 productRoute.use(fileUpload());
 
+function isValidObjectId(id) {
+    return mongoose.Types.ObjectId.isValid(id);
+}
+
 // Route to upload Excel file and create products
 productRoute.post('/import', verifyToken, async (req, res) => {
     if (!req.files || !req.files.file) {
@@ -415,30 +419,43 @@ productRoute.get('/', async (req, res) => {
 
         const filters = {};
         const {
-            title, slug, sku, genericID, treatment, minPrice, maxPrice, packSize,
-            categoryID, manufacturerID, tags, originCountry, isVisible
+            search, minPrice, maxPrice, packSize, isVisible,
+            sortBy = 'title', order = 'asc', country = 'INDIA', currency = 'INR'
         } = req.query;
 
-        const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
+        console.log(search);
+        
+        const regex = new RegExp(search, 'i');
 
-        if (title) filters.title = new RegExp(title, 'i');
-        if (slug) filters.slug = new RegExp(slug, 'i');
-        if (sku) filters['variants.sku'] = new RegExp(sku, 'i');
-        if (genericID && isValidObjectId(genericID)) filters.genericID = genericID;
-        if (treatment) filters.treatment = new RegExp(treatment, 'i');
+        if (search) {
+            filters.$or = [
+                { title: { $regex: regex } },
+                { slug: { $regex: regex } },
+                { 'variants.sku': { $regex: regex } },
+                { treatment: { $regex: regex } },
+                { generic: { $regex: regex } },
+                { tags: { $regex: regex } },
+                { originCountry: { $regex: regex } }
+            ];
+
+            if (isValidObjectId(search)) {
+                filters.$or.push({ _id: search });
+                filters.$or.push({ genericID: search });
+                filters.$or.push({ categoryID: search });
+                filters.$or.push({ manufacturerID: search });
+            }
+        }
+
         if (minPrice) filters['variants.price'] = { ...filters['variants.price'], $gte: parseFloat(minPrice) };
         if (maxPrice) filters['variants.price'] = { ...filters['variants.price'], $lte: parseFloat(maxPrice) };
         if (packSize) filters['variants.packSize'] = packSize;
-        if (categoryID && isValidObjectId(categoryID)) filters.categoryID = categoryID;
-        if (manufacturerID && isValidObjectId(manufacturerID)) filters.manufacturerID = manufacturerID;
-        if (tags) filters.tags = new RegExp(tags, 'i');
-        if (originCountry) filters.originCountry = originCountry;
         if (isVisible) filters.isVisible = isVisible === 'true';
 
         const sortOptions = {};
-        const { sortBy, order } = req.query;
-        if (sortBy && order) {
-            sortOptions[sortBy] = order === 'asc' ? 1 : -1;
+        if (['title', 'createdAt', 'lastModified'].includes(sortBy)) {
+            sortOptions[sortBy] = order === 'desc' ? -1 : 1;
+        } else {
+            sortOptions.title = 1; // Default sorting by title
         }
 
         const totalProducts = await ProductModel.countDocuments(filters);
@@ -447,9 +464,6 @@ productRoute.get('/', async (req, res) => {
         // Fetch exchange rate based on user's selected currency
         let exchangeRate = { rate: 1 };
         let currencySymbol = "₹";
-
-        const country = req.query.country || 'INDIA';
-        const currency = req.query.currency || 'INR';
 
         if (currency !== 'INR') {
             const foundExchangeRate = await ExchangeRate.findOne({ currency });
@@ -471,26 +485,26 @@ productRoute.get('/', async (req, res) => {
         // Adjust product prices based on exchange rate and country selection
         products.forEach(product => {
             product.variants.forEach(variant => {
-                const indianMRP = variant.price || 0; // Replace with actual field name for Indian MRP
-                const indianSaleMRP = variant.salePrice || 0; // Replace with actual field name for Indian MRP
+                const indianMRP = variant.price || 0;
+                const indianSaleMRP = variant.salePrice || 0;
                 const margin = variant.margin / 100 || 0.01; // Default margin is 1% if not provided
 
                 if (country === 'INDIA') {
-                    if (exchangeRate.rate !== 1) { // Currency other than INR
+                    if (exchangeRate.rate !== 1) {
                         variant.price = Number((indianMRP * exchangeRate.rate).toFixed(2));
                         variant.salePrice = Number((indianSaleMRP * exchangeRate.rate).toFixed(2));
                     } else {
                         variant.price = Number(indianMRP.toFixed(2));
                         variant.salePrice = Number(indianSaleMRP.toFixed(2));
                     }
-                } else { // OUTSIDE INDIA
+                } else {
                     const priceWithMargin = indianMRP * (1 + margin);
                     const salePriceWithMargin = indianSaleMRP * (1 + margin);
 
                     variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
                     variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
                 }
-                variant.currency = currencySymbol; // Set the currency symbol
+                variant.currency = currencySymbol;
             });
         });
 
