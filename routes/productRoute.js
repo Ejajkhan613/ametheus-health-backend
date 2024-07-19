@@ -372,7 +372,7 @@ productRoute.get('/search/', async (req, res) => {
 
         const products = await ProductModel.find(filters)
             .collation({ locale: 'en', strength: 2 })
-            .lean(); // Use lean() to get plain JavaScript objects for easier manipulation
+            .lean();
 
         // Adjust product prices based on exchange rate and country selection
         products.forEach(product => {
@@ -424,7 +424,7 @@ productRoute.get('/', async (req, res) => {
         } = req.query;
 
         console.log(search);
-        
+
         const regex = new RegExp(search, 'i');
 
         if (search) {
@@ -480,7 +480,7 @@ productRoute.get('/', async (req, res) => {
             .limit(limit)
             .sort(sortOptions)
             .collation({ locale: 'en', strength: 2 })
-            .lean(); // Use lean() to get plain JavaScript objects for easier manipulation
+            .lean();
 
         // Adjust product prices based on exchange rate and country selection
         products.forEach(product => {

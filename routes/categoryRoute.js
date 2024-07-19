@@ -307,7 +307,7 @@ categoryRoute.patch('/:id', verifyToken, [
 // Get All Categories with conditional fields
 categoryRoute.get('/view', async (req, res) => {
     try {
-        const { search, sortField = 'name', sortOrder = 'asc', data } = req.query;
+        const { search, sortField = 'name', sortOrder = 'asc' } = req.query;
 
         let filter = {};
         if (search) {
@@ -326,49 +326,10 @@ categoryRoute.get('/view', async (req, res) => {
         if (['name', 'createdAt', 'lastModified'].includes(sortField)) {
             sortOptions[sortField] = sortOrder === 'desc' ? -1 : 1;
         } else {
-            sortOptions.name = 1; // Default sorting by name
+            sortOptions.name = 1;
         }
 
-        let categories;
-        if (data === 'all') {
-            categories = await Category.aggregate([
-                { $match: filter },
-                {
-                    $lookup: {
-                        from: 'products',
-                        localField: '_id',
-                        foreignField: 'categoryID',
-                        as: 'products'
-                    }
-                },
-                {
-                    $unwind: {
-                        path: '$products',
-                        preserveNullAndEmptyArrays: true
-                    }
-                },
-                {
-                    $group: {
-                        _id: '$_id',
-                        name: { $first: '$name' },
-                        image: { $first: '$image' },
-                        slug: { $first: '$slug' },
-                        productCount: { $sum: { $cond: [{ $ifNull: ['$products', false] }, 1, 0] } }
-                    }
-                },
-                {
-                    $project: {
-                        name: 1,
-                        image: 1,
-                        slug: 1,
-                        productCount: 1
-                    }
-                },
-                { $sort: sortOptions }
-            ]);
-        } else {
-            categories = await Category.find(filter).select('name').sort(sortOptions);
-        }
+        let categories = await Category.find(filter).select('name').sort(sortOptions);
 
         return res.status(200).send(categories);
     } catch (error) {
@@ -471,11 +432,26 @@ categoryRoute.get('/hierarchy', async (req, res) => {
     }
 });
 
-// Get Category Hierarchy names and id's
+// Get Category Hierarchy names and id's with product count if data=all
 categoryRoute.get('/hierarchy-names', async (req, res) => {
     try {
+        const { data } = req.query;
+
         // Fetch categories with only _id and name fields
         const categories = await Category.find({}, '_id name parent slug').lean();
+
+        // If data=all, include product counts
+        let productCounts = [];
+        if (data === 'all') {
+            productCounts = await ProductModel.aggregate([
+                {
+                    $group: {
+                        _id: "$categoryID",
+                        productCount: { $sum: 1 }
+                    }
+                }
+            ]);
+        }
 
         // Creating a map to hold category data and child references
         const categoryMap = {};
@@ -484,9 +460,19 @@ categoryRoute.get('/hierarchy-names', async (req, res) => {
                 _id: category._id,
                 name: category.name,
                 slug: category.slug,
-                children: []
+                children: [],
+                productCount: 0
             };
         });
+
+        // Map product counts to categories
+        if (data === 'all') {
+            productCounts.forEach(count => {
+                if (categoryMap[count._id]) {
+                    categoryMap[count._id].productCount = count.productCount;
+                }
+            });
+        }
 
         // Creating the hierarchy
         const rootCategories = [];
