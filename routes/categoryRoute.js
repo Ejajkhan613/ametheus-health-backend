@@ -13,6 +13,10 @@ const verifyToken = require('../middlewares/auth');
 
 const categoryRoute = express.Router();
 
+function isValidObjectId(id) {
+    return mongoose.Types.ObjectId.isValid(id);
+}
+
 const s3Client = new S3Client({
     region: process.env.AWS_REGION,
     credentials: {
@@ -303,11 +307,32 @@ categoryRoute.patch('/:id', verifyToken, [
 // Get All Categories with conditional fields
 categoryRoute.get('/view', async (req, res) => {
     try {
-        const { data } = req.query;
+        const { search, sortField = 'name', sortOrder = 'asc', data } = req.query;
+
+        let filter = {};
+        if (search) {
+            const regex = new RegExp(search, 'i');
+            filter.$or = [
+                { name: { $regex: regex } },
+                { slug: { $regex: regex } }
+            ];
+
+            if (isValidObjectId(search)) {
+                filter.$or.push({ _id: search });
+            }
+        }
+
+        const sortOptions = {};
+        if (['name', 'createdAt', 'lastModified'].includes(sortField)) {
+            sortOptions[sortField] = sortOrder === 'desc' ? -1 : 1;
+        } else {
+            sortOptions.name = 1; // Default sorting by name
+        }
 
         let categories;
         if (data === 'all') {
             categories = await Category.aggregate([
+                { $match: filter },
                 {
                     $lookup: {
                         from: 'products',
@@ -338,10 +363,11 @@ categoryRoute.get('/view', async (req, res) => {
                         slug: 1,
                         productCount: 1
                     }
-                }
+                },
+                { $sort: sortOptions }
             ]);
         } else {
-            categories = await Category.find().select('name');
+            categories = await Category.find(filter).select('name').sort(sortOptions);
         }
 
         return res.status(200).send(categories);
