@@ -438,7 +438,7 @@ categoryRoute.get('/hierarchy-names', async (req, res) => {
         const { data } = req.query;
 
         // Fetch categories with only _id and name fields
-        const categories = await Category.find({}, '_id name parent slug').lean();
+        const categories = await Category.find({}, '_id name parent slug image').lean();
 
         // If data=all, include product counts
         let productCounts = [];
