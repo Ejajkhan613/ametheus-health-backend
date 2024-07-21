@@ -25,6 +25,7 @@ const genericRoute = require('./routes/genericRoute');
 const productRoute = require('./routes/productRoute');
 const wishlistRoute = require('./routes/wishlistRoute');
 const cartRoute = require('./routes/cartRoute');
+const checkoutRoute = require('./routes/checkoutRoute');
 const currencyRouter = require('./routes/currencyPriceRoute');
 
 const app = express();
@@ -72,6 +73,9 @@ app.use('/ah/api/v1/wishlist', wishlistRoute);
 // Cart
 app.use('/ah/api/v1/cart', cartRoute);
 
+// Order
+app.use('/ah/api/v1/order', checkoutRoute);
+
 // Cart
 app.use('/ah/api/v1/currency', currencyRouter);
 
@@ -79,12 +83,12 @@ app.use('/ah/api/v1/currency', currencyRouter);
 
 
 // HTTPS Server Configuration
-const privateKey = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/privkey.pem', 'utf8');
-const certificate = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/cert.pem', 'utf8');
-const credentials = { key: privateKey, cert: certificate };
+// const privateKey = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/privkey.pem', 'utf8');
+// const certificate = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/cert.pem', 'utf8');
+// const credentials = { key: privateKey, cert: certificate };
 
-// Starting HTTPS Server
-const httpsServer = https.createServer(credentials, app);
+// // Starting HTTPS Server
+// const httpsServer = https.createServer(credentials, app);
 
 
 const fetchAndUpdateRates = async () => {
@@ -119,7 +123,7 @@ const fetchAndUpdateRates = async () => {
 cron.schedule('0 */6 * * *', fetchAndUpdateRates);
 
 
-httpsServer.listen(Port, async () => {
+app.listen(Port, async () => {
     try {
         await DBConnection;
         console.log(`Connected to DB`);

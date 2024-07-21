@@ -32,8 +32,17 @@ const cartDetailSchema = new mongoose.Schema({
 const cartSchema = new mongoose.Schema({
     userID: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     cartDetails: [cartDetailSchema]
-});
+}, { versionKey: false });
+
 
 const CartItem = mongoose.model('Cart', cartSchema);
 
 module.exports = CartItem;
+
+// const cartSchema = new mongoose.Schema({
+//     userID: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+//     cartDetails: [cartDetailSchema],
+//     totalPrice: { type: Number },
+//     deliveryCharge: { type: Number },
+//     totalCartPrice: { type: Number }
+// }, { versionKey: false });

@@ -1,91 +1,70 @@
 const express = require('express');
-const mongoose = require('mongoose');
+const router = express.Router();
 const verifyToken = require('../middlewares/auth');
-const CartItem = require('../models/cartModel');
-const Product = require('../models/productModel');
-const ExchangeRate = require('../models/currencyPriceModel');
+const ProductModel = require('../models/productModel');
 const WishlistItem = require('../models/wishlistModel');
+const CartModel = require('../models/cartModel');
+const ExchangeRateModel = require('../models/currencyPriceModel');
 
-const cartRoute = express.Router();
+// Add specific product and its variant in cart
+router.post('/', verifyToken, async (req, res) => {
+    const { productID, variantID, quantity, country = "INDIA", currency = "INR" } = req.body;
 
-async function getExchangeRate(currency) {
-    const exchangeRate = await ExchangeRate.findOne({ currency });
-    if (exchangeRate) {
-        return {
-            rate: exchangeRate.rate,
-            symbol: exchangeRate.symbol || currency
-        };
-    } else {
-        return {
-            rate: 1,
-            symbol: '₹'
-        };
-    }
-}
-
-// POST route for adding products to cart
-cartRoute.post('/', verifyToken, async (req, res) => {
     try {
-        const { productID, variantID, quantity = 1, currency = 'INR', country = 'INDIA' } = req.body;
-        const userID = req.userDetail._id;
+        // Fetch the product by productID
+        const product = await ProductModel.findById(productID);
 
-        // Validation checks for product and variant IDs
-        if (!productID) {
-            return res.status(400).send({ msg: 'Product ID is not provided' });
-        }
-
-        if (!variantID) {
-            return res.status(400).send({ msg: 'Variant ID is not provided' });
-        }
-
-        // Fetch product and variant details from MongoDB
-        const product = await Product.findById(productID);
+        // Check if the product is found
         if (!product) {
-            return res.status(404).send({ msg: 'Product not found' });
+            return res.status(404).json({ message: 'Product not found' });
         }
 
+        // Find the specific variant in the product
         const variant = product.variants.id(variantID);
+
+        // Check if the variant is found
         if (!variant) {
-            return res.status(404).send({ msg: 'Variant not found for the product' });
+            return res.status(404).json({ message: 'Variant not found' });
         }
 
-        // Quantity validation against minOrderQuantity and maxOrderQuantity
+        // Check if the product and variant meet the required conditions
+        if (!variant.isStockAvailable || variant.price === 0 || !product.isVisible) {
+            return res.status(400).json({ message: 'This Medicine cannot be added to the cart due to stock, price, or visibility constraints' });
+        }
+
+        // Check if the quantity is within the specified limits
         if (quantity < variant.minOrderQuantity || quantity > variant.maxOrderQuantity) {
-            return res.status(400).send({ msg: `Quantity must be between ${variant.minOrderQuantity} and ${variant.maxOrderQuantity}` });
+            return res.status(400).json({ message: `Quantity must be between ${variant.minOrderQuantity} and ${variant.maxOrderQuantity}` });
         }
 
-        // Fetch or create the user's cart
-        let cart = await CartItem.findOne({ userID });
+        // Find or create a cart for the user
+        let cart = await CartModel.findOne({ userID: req.userDetail._id });
+
+        // If cart is not found then create a new cart
         if (!cart) {
-            cart = new CartItem({ userID, cartDetails: [] });
+            cart = new CartModel({ userID: req.userDetail._id, cartDetails: [] });
         }
 
-        // Check if the product variant is already in the cart
-        let cartItem = cart.cartDetails.find(item => item.productID.toString() === productID && item.variantID.toString() === variantID);
+        // Find if the product and variant already exist in the cart
+        const cartItem = cart.cartDetails.find(item => item.productID.toString() === productID && item.variantID.toString() === variantID);
 
         if (cartItem) {
-            // Update quantity if the product variant is already in the cart
-            cartItem.quantity += quantity;
-            if (cartItem.quantity > variant.maxOrderQuantity) {
-                cartItem.quantity = variant.maxOrderQuantity;
-            }
+            // Update the quantity if the item already exists in the cart
+            cartItem.quantity = quantity;
         } else {
+            // Add the new item to the cart
             cart.cartDetails.push({
                 productID,
                 variantID,
                 quantity,
                 productDetail: {
-                    _id: product._id,
                     title: product.title,
                     slug: product.slug,
-                    images: product.images,
-                    genericID: product.genericID,
                     generic: product.generic,
                     treatment: product.treatment,
                     isReturnable: product.isReturnable,
                     isPrescriptionRequired: product.isPrescriptionRequired,
                     isVisible: product.isVisible,
-                    isFeatured: product.isFeatured,
                     shortDescription: product.shortDescription,
                     description: product.description,
                     sideEffects: product.sideEffects,
@@ -105,18 +84,17 @@ cartRoute.post('/', verifyToken, async (req, res) => {
                     metaTitle: product.metaTitle,
                     metaDescription: product.metaDescription,
                     metaTags: product.metaTags,
-                    variants: product.variants,
                 },
                 variantDetail: {
-                    _id: variant._id,
                     sku: variant.sku,
-                    price: variant.price,
-                    salePrice: variant.salePrice,
-                    minOrderQuantity: variant.minOrderQuantity,
-                    maxOrderQuantity: variant.maxOrderQuantity,
-                    margin: variant.margin,
                     packSize: variant.packSize,
                     isStockAvailable: variant.isStockAvailable,
+                    currency: variant.currency,
+                    price: variant.price,
+                    salePrice: variant.salePrice,
+                    margin: variant.margin,
+                    minOrderQuantity: variant.minOrderQuantity,
+                    maxOrderQuantity: variant.maxOrderQuantity,
                     weight: variant.weight,
                     weightUnit: variant.weightUnit,
                     length: variant.length,
@@ -125,521 +103,603 @@ cartRoute.post('/', verifyToken, async (req, res) => {
                     widthUnit: variant.widthUnit,
                     height: variant.height,
                     heightUnit: variant.heightUnit,
-                    currency: variant.currency
                 }
             });
         }
 
-        // Fetch exchange rate and currency symbol based on user's selected currency
-        const { rate: exchangeRate, symbol: currencySymbol } = await getExchangeRate(currency);
+        // Calculate the total price of the cart
+        let totalPrice = cart.cartDetails.reduce((total, item) => {
+            let itemPrice;
+
+            if (country === 'INDIA') {
+                itemPrice = item.variantDetail.salePrice !== 0 ? item.variantDetail.salePrice : item.variantDetail.price;
+            } else {
+                // For non-India, calculate price with margin
+                itemPrice = item.variantDetail.salePrice !== 0 ? (item.variantDetail.salePrice + (item.variantDetail.salePrice * item.variantDetail.margin / 100)) : (item.variantDetail.price + (item.variantDetail.price * item.variantDetail.margin / 100));
+            }
+
+            return total + itemPrice * item.quantity;
+        }, 0);
+
+        // Determine delivery charge based on country
+        let deliveryCharge = 0;
+        if (country === 'INDIA') {
+            if (totalPrice > 0 && totalPrice < 500) {
+                deliveryCharge = 99;
+            } else if (totalPrice >= 500 && totalPrice < 1000) {
+                deliveryCharge = 59;
+            } else if (totalPrice >= 1000) {
+                deliveryCharge = 0;
+            }
+        } else {
+            if (totalPrice > 0 && totalPrice < 4177.78) {
+                deliveryCharge = 4178.62;
+            } else if (totalPrice >= 4177.78 && totalPrice < 16713.64) {
+                deliveryCharge = 3342.90;
+            } else if (totalPrice >= 16713.65) {
+                deliveryCharge = 0;
+            }
+        }
+
+        // Fetch exchange rate for the selected currency
+        let deliveryChargeInCurrency = deliveryCharge;
+        let symbol = '₹';
+        if (currency !== 'INR') {
+            const exchangeRate = await ExchangeRateModel.findOne({ currency: currency });
+            if (!exchangeRate) {
+                return res.status(404).json({ message: 'Exchange rate not found for the selected currency' });
+            }
+            // Convert delivery charge to the selected currency
+            deliveryChargeInCurrency = (deliveryCharge * exchangeRate.rate).toFixed(2);
+
+            // Convert total price to the selected currency
+            totalPrice = (totalPrice * exchangeRate.rate).toFixed(2);
+            totalCartPrice = (parseFloat(totalPrice) + parseFloat(deliveryChargeInCurrency)).toFixed(2);
+
+            symbol = exchangeRate.currency == 'AED' ? exchangeRate.currency : exchangeRate.symbol;
+        } else {
+            // Calculate total cart price in INR
+            totalCartPrice = (totalPrice + deliveryCharge).toFixed(2);
+        }
+
+        // Convert numbers to strings with two decimal places
+        totalPrice = parseFloat(totalPrice).toFixed(2);
+        deliveryChargeInCurrency = parseFloat(deliveryChargeInCurrency).toFixed(2);
+        totalCartPrice = parseFloat(totalCartPrice).toFixed(2);
+
+        // Save the updated cart without storing the calculated prices
+        await cart.save();
+
+        // Send the response with calculated prices and currency
+        res.status(200).json({
+            message: 'Product added to cart successfully',
+            cart: {
+                ...cart.toObject(),
+                totalPrice: totalPrice.toString(),
+                deliveryCharge: deliveryChargeInCurrency.toString(),
+                totalCartPrice: totalCartPrice.toString(),
+                currency: symbol
+            }
+        });
+
+    } catch (error) {
+        console.log("Error while adding Product in Cart", error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
+// Get all cart details with prices
+router.get('/', verifyToken, async (req, res) => {
+    const { country = "INDIA", currency = "INR" } = req.query;
+
+    try {
+        // Find the user's cart
+        const cart = await CartModel.findOne({ userID: req.userDetail._id });
+
+        // Check if the cart is found
+        if (!cart) {
+            return res.status(404).json({ message: 'Cart not found' });
+        }
+
+        // Calculate the total price of the cart
+        let totalPrice = cart.cartDetails.reduce((total, item) => {
+            let itemPrice;
+
+            if (country === 'INDIA') {
+                itemPrice = item.variantDetail.salePrice !== 0 ? item.variantDetail.salePrice : item.variantDetail.price;
+            } else {
+                // For non-India, calculate price with margin
+                itemPrice = item.variantDetail.salePrice !== 0 ?
+                    (item.variantDetail.salePrice + (item.variantDetail.salePrice * item.variantDetail.margin / 100)) :
+                    (item.variantDetail.price + (item.variantDetail.price * item.variantDetail.margin / 100));
+            }
+
+            return total + itemPrice * item.quantity;
+        }, 0);
+
+        // Determine delivery charge based on country
+        let deliveryCharge = 0;
+        if (country === 'INDIA') {
+            if (totalPrice > 0 && totalPrice < 500) {
+                deliveryCharge = 99;
+            } else if (totalPrice >= 500 && totalPrice < 1000) {
+                deliveryCharge = 59;
+            } else if (totalPrice >= 1000) {
+                deliveryCharge = 0;
+            }
+        } else {
+            if (totalPrice > 0 && totalPrice < 4177.78) {
+                deliveryCharge = 4178.62;
+            } else if (totalPrice >= 4177.78 && totalPrice < 16713.64) {
+                deliveryCharge = 3342.90;
+            } else if (totalPrice >= 16713.65) {
+                deliveryCharge = 0;
+            }
+        }
+
+        // Fetch exchange rate for the selected currency
+        let deliveryChargeInCurrency = deliveryCharge;
+        let symbol = '₹';
+        if (currency !== 'INR') {
+            const exchangeRate = await ExchangeRateModel.findOne({ currency: currency });
+            if (!exchangeRate) {
+                return res.status(404).json({ message: 'Exchange rate not found for the selected currency' });
+            }
+            // Convert delivery charge to the selected currency
+            deliveryChargeInCurrency = (deliveryCharge * exchangeRate.rate).toFixed(2);
+
+            // Convert total price to the selected currency
+            totalPrice = (totalPrice * exchangeRate.rate).toFixed(2);
+            totalCartPrice = (parseFloat(totalPrice) + parseFloat(deliveryChargeInCurrency)).toFixed(2);
+
+            symbol = exchangeRate.currency === 'AED' ? exchangeRate.currency : exchangeRate.symbol;
+        } else {
+            // Calculate total cart price in INR
+            totalCartPrice = (totalPrice + deliveryCharge).toFixed(2);
+        }
+
+        // Convert numbers to strings with two decimal places
+        totalPrice = parseFloat(totalPrice).toFixed(2);
+        deliveryChargeInCurrency = parseFloat(deliveryChargeInCurrency).toFixed(2);
+        totalCartPrice = parseFloat(totalCartPrice).toFixed(2);
+
+        // Send the response with calculated prices and currency
+        res.status(200).json({
+            message: 'Cart retrieved successfully',
+            cart: {
+                ...cart.toObject(),
+                totalPrice: totalPrice.toString(),
+                deliveryCharge: deliveryChargeInCurrency.toString(),
+                totalCartPrice: totalCartPrice.toString(),
+                currency: symbol
+            }
+        });
+
+    } catch (error) {
+        console.log("Error while retrieving the cart", error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
+// Delete specific product and its variant from cart
+router.delete('/:id', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    const { country = "INDIA", currency = "INR" } = req.query;
+
+    try {
+        // Find the user's cart
+        const cart = await CartModel.findOne({ userID: req.userDetail._id });
+
+        // Check if the cart is found
+        if (!cart) {
+            return res.status(404).json({ message: 'Cart not found' });
+        }
+
+        // Find the index of the cartDetails object to be removed
+        const itemIndex = cart.cartDetails.findIndex(item => item._id.toString() === id);
+
+        // Check if the item exists in the cart
+        if (itemIndex === -1) {
+            return res.status(404).json({ message: 'Item not found in the cart' });
+        }
+
+        // Remove the item from the cartDetails array
+        cart.cartDetails.splice(itemIndex, 1);
+
+        // Calculate the total price of the cart
+        let totalPrice = cart.cartDetails.reduce((total, item) => {
+            let itemPrice;
+
+            if (country === 'INDIA') {
+                itemPrice = item.variantDetail.salePrice !== 0 ? item.variantDetail.salePrice : item.variantDetail.price;
+            } else {
+                // For non-India, calculate price with margin
+                itemPrice = item.variantDetail.salePrice !== 0 ?
+                    (item.variantDetail.salePrice + (item.variantDetail.salePrice * item.variantDetail.margin / 100)) :
+                    (item.variantDetail.price + (item.variantDetail.price * item.variantDetail.margin / 100));
+            }
+
+            return total + itemPrice * item.quantity;
+        }, 0);
+
+        // Determine delivery charge based on country
+        let deliveryCharge = 0;
+        if (country === 'INDIA') {
+            if (totalPrice > 0 && totalPrice < 500) {
+                deliveryCharge = 99;
+            } else if (totalPrice >= 500 && totalPrice < 1000) {
+                deliveryCharge = 59;
+            } else if (totalPrice >= 1000) {
+                deliveryCharge = 0;
+            }
+        } else {
+            if (totalPrice > 0 && totalPrice < 4177.78) {
+                deliveryCharge = 4178.62;
+            } else if (totalPrice >= 4177.78 && totalPrice < 16713.64) {
+                deliveryCharge = 3342.90;
+            } else if (totalPrice >= 16713.65) {
+                deliveryCharge = 0;
+            }
+        }
+
+        // Fetch exchange rate for the selected currency
+        let deliveryChargeInCurrency = deliveryCharge;
+        let symbol = '₹';
+        if (currency !== 'INR') {
+            const exchangeRate = await ExchangeRateModel.findOne({ currency: currency });
+            if (!exchangeRate) {
+                return res.status(404).json({ message: 'Exchange rate not found for the selected currency' });
+            }
+            // Convert delivery charge to the selected currency
+            deliveryChargeInCurrency = (deliveryCharge * exchangeRate.rate).toFixed(2);
+
+            // Convert total price to the selected currency
+            totalPrice = (totalPrice * exchangeRate.rate).toFixed(2);
+            totalCartPrice = (parseFloat(totalPrice) + parseFloat(deliveryChargeInCurrency)).toFixed(2);
+
+            symbol = exchangeRate.currency === 'AED' ? exchangeRate.currency : exchangeRate.symbol;
+        } else {
+            // Calculate total cart price in INR
+            totalCartPrice = (totalPrice + deliveryCharge).toFixed(2);
+        }
+
+        // Convert numbers to strings with two decimal places
+        totalPrice = parseFloat(totalPrice).toFixed(2);
+        deliveryChargeInCurrency = parseFloat(deliveryChargeInCurrency).toFixed(2);
+        totalCartPrice = parseFloat(totalCartPrice).toFixed(2);
 
         // Save the updated cart
         await cart.save();
 
-        // Calculate total price based on salePrice or price of each item in the cart
-        let totalPrice = 0;
-        cart.cartDetails.forEach(item => {
-            const itemPrice = (item.variantDetail.salePrice !== 0 ? item.variantDetail.salePrice : item.variantDetail.price) * (1 + item.variantDetail.margin / 100);
-            totalPrice += itemPrice * item.quantity;
+        // Send the response with the updated cart and calculated prices
+        res.status(200).json({
+            message: 'Item removed from cart successfully',
+            cart: {
+                ...cart.toObject(),
+                totalPrice: totalPrice.toString(),
+                deliveryCharge: deliveryChargeInCurrency.toString(),
+                totalCartPrice: totalCartPrice.toString(),
+                currency: symbol
+            }
         });
 
-        // Convert total price to user's selected currency if not INR
-        if (currency !== 'INR') {
-            totalPrice *= exchangeRate;
-        }
-
-        // Calculate delivery charge based on the country and total price
-        let deliveryCharge = 0;
-
-        if (country === 'INDIA') {
-            // Delivery charge slab for India
-            if (totalPrice >= 0.01 && totalPrice <= 499.99) {
-                deliveryCharge = 99 * exchangeRate;
-            } else if (totalPrice >= 500 && totalPrice <= 999.99) {
-                deliveryCharge = 59 * exchangeRate;
-            }
-            // Free delivery for orders of 1000 INR or more
-        } else {
-            // Delivery charge slab for countries outside India
-            if (totalPrice >= 0.01 && totalPrice <= 4177.78) {
-                deliveryCharge = 4178.62 * exchangeRate;
-            } else if (totalPrice >= 4177.79 && totalPrice <= 16713.64) {
-                deliveryCharge = 3342.90 * exchangeRate;
-            }
-            // Free delivery for orders of 16713.65 INR or more
-        }
-
-        // Calculate total cart price including delivery charge
-        const totalCartPrice = totalPrice + deliveryCharge;
-
-        // Prepare response data
-        const responseData = {
-            msg: 'Product added to cart successfully',
-            data: cart.cartDetails,
-            totalPrice: +totalPrice.toFixed(2),
-            deliveryCharge: +deliveryCharge.toFixed(2),
-            totalCartPrice: +totalCartPrice.toFixed(2),
-            currency: currency === 'INR' ? '₹' : currencySymbol
-        };
-
-        // Send response
-        res.send(responseData);
     } catch (error) {
-        console.error('Error adding product to cart:', error);
-        res.status(500).send({ msg: 'Server Error', error: error.message });
+        console.log("Error while removing item from cart", error);
+        res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
 
-// Add item to cart from wishlist
-cartRoute.post('/add-from-wishlist', verifyToken, async (req, res) => {
+// Delete all the cart
+router.delete('/', verifyToken, async (req, res) => {
     try {
-        let { wishlistItemID, quantity, currency, country } = req.body;
-        const userID = req.userDetail._id;
+        // Find and delete the user's cart
+        const result = await CartModel.deleteOne({ userID: req.userDetail._id });
 
-        // If currency and country are not provided in the body, fallback to defaults
-        currency = currency || 'INR';
-        country = country || 'INDIA';
+        // Check if the cart was deleted
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ message: 'Cart not found' });
+        }
 
-        const wishlistItem = await WishlistItem.findById(wishlistItemID).populate('productID');
+        // Send success response
+        res.status(200).json({ message: 'Cart deleted successfully' });
+    } catch (error) {
+        console.log("Error while deleting the cart", error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
+// Add a single item from the wishlist to the cart
+router.post('/add-from-wishlist', verifyToken, async (req, res) => {
+    const userID = req.userDetail._id;
+    const { productID, variantID, country = 'INDIA', currency = 'INR' } = req.body;
+
+    try {
+        const wishlist = await WishlistItem.findOne({ userID });
+
+        if (!wishlist) {
+            return res.status(404).json({ msg: 'Wishlist not found' });
+        }
+
+        const wishlistItem = wishlist.items.find(item => item.productID.toString() === productID && item.variantID.toString() === variantID);
+
         if (!wishlistItem) {
-            return res.status(404).send({ msg: 'Wishlist item not found' });
-        }
-
-        const product = wishlistItem.productID;
-        const variantID = wishlistItem.variantID;
-        const variant = product.variants.id(variantID);
-
-        if (quantity < variant.minOrderQuantity || quantity > variant.maxOrderQuantity) {
-            return res.status(400).send({ msg: `Quantity must be between ${variant.minOrderQuantity} and ${variant.maxOrderQuantity}` });
-        }
-
-        let cart = await CartItem.findOne({ userID });
-
-        if (!cart) {
-            cart = new CartItem({ userID, cartDetails: [] });
-        }
-
-        let cartItem = cart.cartDetails.find(item => item.productID.toString() === product._id.toString() && item.variantID.toString() === variantID.toString());
-
-        if (cartItem) {
-            cartItem.quantity += quantity;
-            if (cartItem.quantity > variant.maxOrderQuantity) {
-                cartItem.quantity = variant.maxOrderQuantity;
-            }
-        } else {
-            cart.cartDetails.push({
-                productID: product._id,
-                variantID,
-                quantity,
-                productDetail: {
-                    _id: product._id,
-                    title: product.title,
-                    slug: product.slug,
-                    images: product.images,
-                    genericID: product.genericID,
-                    generic: product.generic,
-                    treatment: product.treatment,
-                    isReturnable: product.isReturnable,
-                    isPrescriptionRequired: product.isPrescriptionRequired,
-                    isVisible: product.isVisible,
-                    isFeatured: product.isFeatured,
-                    shortDescription: product.shortDescription,
-                    description: product.description,
-                    sideEffects: product.sideEffects,
-                    faq: product.faq,
-                    additionalInformation: product.additionalInformation,
-                    moreInformation: product.moreInformation,
-                    purchaseNote: product.purchaseNote,
-                    categoryID: product.categoryID,
-                    tags: product.tags,
-                    upSell: product.upSell,
-                    crossSell: product.crossSell,
-                    externalLink: product.externalLink,
-                    position: product.position,
-                    manufacturerID: product.manufacturerID,
-                    originCountry: product.originCountry,
-                    isDiscontinued: product.isDiscontinued,
-                    metaTitle: product.metaTitle,
-                    metaDescription: product.metaDescription,
-                    metaTags: product.metaTags,
-                    variants: product.variants,
-                },
-                variantDetail: {
-                    _id: variant._id,
-                    sku: variant.sku,
-                    price: variant.price,
-                    salePrice: variant.salePrice,
-                    minOrderQuantity: variant.minOrderQuantity,
-                    maxOrderQuantity: variant.maxOrderQuantity,
-                    margin: variant.margin,
-                    packSize: variant.packSize,
-                    isStockAvailable: variant.isStockAvailable,
-                    weight: variant.weight,
-                    weightUnit: variant.weightUnit,
-                    length: variant.length,
-                    lengthUnit: variant.lengthUnit,
-                    width: variant.width,
-                    widthUnit: variant.widthUnit,
-                    height: variant.height,
-                    heightUnit: variant.heightUnit,
-                    currency: variant.currency
-                }
-            });
-        }
-
-        // Fetch exchange rate based on user's selected currency
-        const { rate: exchangeRate, symbol: currencySymbol } = await getExchangeRate(currency);
-
-        await cart.save();
-
-        // Calculate total price
-        let totalPrice = 0;
-
-        cart.cartDetails.forEach(item => {
-            const itemPrice = (item.variantDetail.salePrice !== 0 ? item.variantDetail.salePrice : item.variantDetail.price) * (1 + item.variantDetail.margin / 100);
-            totalPrice += itemPrice * item.quantity;
-        });
-
-        // Convert the total price to the user's selected currency if not INR
-        if (currency !== 'INR') {
-            totalPrice *= exchangeRate;
-        }
-
-        // Calculate delivery charge based on the country and total price
-        let deliveryCharge = 0;
-        if (country === 'INDIA') {
-            if (totalPrice >= 0.01 && totalPrice <= 499.99) {
-                deliveryCharge = 99 * exchangeRate;
-            } else if (totalPrice >= 500 && totalPrice <= 999.99) {
-                deliveryCharge = 59 * exchangeRate;
-            }
-        } else {
-            if (totalPrice >= 0.01 && totalPrice <= 4177.78) {
-                deliveryCharge = 4178.62 * exchangeRate;
-            } else if (totalPrice >= 4177.79 && totalPrice <= 16713.64) {
-                deliveryCharge = 3342.90 * exchangeRate;
-            }
-        }
-
-        // Calculate total cart price
-        const totalCartPrice = deliveryCharge + totalPrice;
-
-        res.status(200).send({
-            msg: 'Product added to cart from wishlist successfully',
-            data: cart.cartDetails,
-            totalCartPrice: +totalCartPrice.toFixed(2),
-            deliveryCharge: +deliveryCharge.toFixed(2),
-            totalPrice: +totalPrice.toFixed(2),
-            currency: currency === 'INR' ? '₹' : currencySymbol
-        });
-    } catch (error) {
-        console.error('Error adding product to cart from wishlist:', error);
-        res.status(500).send({ msg: 'Internal server error, try again later' });
-    }
-});
-
-// Update cart item quantity
-cartRoute.patch('/', verifyToken, async (req, res) => {
-    try {
-        let { productID, variantID, quantity, currency, country } = req.body;
-        const userID = req.userDetail._id;
-
-        // If currency and country are not provided in the body, fallback to defaults
-        currency = currency || 'INR';
-        country = country || 'INDIA';
-
-        const cart = await CartItem.findOne({ userID });
-        if (!cart) {
-            return res.status(404).send({ msg: 'Cart not found' });
-        }
-
-        const cartItem = cart.cartDetails.find(item => item.productID.toString() === productID && item.variantID.toString() === variantID);
-        if (!cartItem) {
-            return res.status(404).send({ msg: 'Cart item not found' });
+            return res.status(404).json({ msg: 'Item not found in wishlist' });
         }
 
         const product = await Product.findById(productID);
+        if (!product) {
+            return res.status(404).json({ msg: 'Product not found' });
+        }
+
         const variant = product.variants.id(variantID);
-
-        if (quantity < variant.minOrderQuantity || quantity > variant.maxOrderQuantity) {
-            return res.status(400).send({ msg: `Quantity must be between ${variant.minOrderQuantity} and ${variant.maxOrderQuantity}` });
+        if (!variant) {
+            return res.status(404).json({ msg: 'Variant not found' });
         }
 
-        cartItem.quantity = quantity;
+        let cart = await CartModel.findOne({ userID });
+        if (!cart) {
+            cart = new CartModel({ userID, cartDetails: [{ productID, variantID, quantity: 1 }] });
+        } else {
+            const itemExists = cart.cartDetails.some(item => item.productID.toString() === productID && item.variantID.toString() === variantID);
+            if (itemExists) {
+                return res.status(400).json({ msg: 'Product variant already in cart' });
+            }
+            cart.cartDetails.push({ productID, variantID, quantity: 1 });
+        }
 
-        // Fetch exchange rate based on user's selected currency
-        const { rate: exchangeRate, symbol: currencySymbol } = await getExchangeRate(currency);
-
-        // Save cart updates
         await cart.save();
 
-        // Calculate total price and delivery charge
-        let totalCartPrice = 0;
-
-        cart.cartDetails.forEach(item => {
-            const product = item.productDetail;
-            const variant = item.variantDetail;
-
-            const indianMRP = variant.price || 0;
-            const margin = variant.margin / 100 || 0.01;
+        // Calculate the total price of the cart
+        let totalPrice = cart.cartDetails.reduce((total, item) => {
+            let itemPrice;
 
             if (country === 'INDIA') {
-                // Calculate prices in INR
-                item.price = indianMRP;
+                itemPrice = item.variantDetail.salePrice !== 0 ? item.variantDetail.salePrice : item.variantDetail.price;
             } else {
-                // Calculate prices for other countries with margin
-                const priceWithMargin = indianMRP * (1 + margin);
-
-                item.price = priceWithMargin;
+                // For non-India, calculate price with margin
+                itemPrice = item.variantDetail.salePrice !== 0 ?
+                    (item.variantDetail.salePrice + (item.variantDetail.salePrice * item.variantDetail.margin / 100)) :
+                    (item.variantDetail.price + (item.variantDetail.price * item.variantDetail.margin / 100));
             }
 
-            // Convert price to selected currency
-            item.price = item.price * exchangeRate;
+            return total + itemPrice * item.quantity;
+        }, 0);
 
-            item.currency = currencySymbol; // Set the currency symbol
-
-            // Calculate total price
-            totalCartPrice += item.price * item.quantity;
-        });
-
-        // Determine delivery charge
+        // Determine delivery charge based on country
         let deliveryCharge = 0;
         if (country === 'INDIA') {
-            if (totalCartPrice >= 0.01 && totalCartPrice <= 499.99) {
+            if (totalPrice > 0 && totalPrice < 500) {
                 deliveryCharge = 99;
-            } else if (totalCartPrice >= 500 && totalCartPrice <= 999.99) {
-                deliveryCharge = 59;
-            } else if (totalCartPrice >= 1000) {
-                deliveryCharge = 0; // Free delivery
-            }
-        } else {
-            if (totalCartPrice >= 0.01 && totalCartPrice <= 4177.78) {
-                deliveryCharge = 4178.62;
-            } else if (totalCartPrice >= 4177.79 && totalCartPrice <= 16713.64) {
-                deliveryCharge = 3342.90;
-            } else if (totalCartPrice >= 16713.65) {
-                deliveryCharge = 0; // Free delivery
-            }
-        }
-
-        // Convert delivery charge if needed
-        deliveryCharge = deliveryCharge * exchangeRate;
-
-        // Calculate total cart price
-        const totalPrice = totalCartPrice + deliveryCharge;
-
-        res.status(200).send({
-            msg: 'Cart item quantity updated successfully',
-            data: cart.cartDetails,
-            totalCartPrice: +totalCartPrice.toFixed(2),
-            deliveryCharge: +deliveryCharge.toFixed(2),
-            totalPrice: +totalPrice.toFixed(2),
-            currency: currencySymbol
-        });
-    } catch (error) {
-        console.error('Error updating cart item quantity:', error);
-        res.status(500).send({ msg: 'Internal server error, try again later' });
-    }
-});
-
-// Remove item from cart
-cartRoute.delete('/single/', verifyToken, async (req, res) => {
-    try {
-        const { productID, variantID } = req.body;
-        const { currency = 'INR', country = 'INDIA' } = req.body;
-        const userID = req.userDetail._id;
-
-        const cart = await CartItem.findOne({ userID });
-        if (!cart) {
-            return res.status(404).send({ msg: 'Cart not found' });
-        }
-
-        const indexToRemove = cart.cartDetails.findIndex(item =>
-            item.productID.toString() === productID && item.variantID.toString() === variantID
-        );
-        if (indexToRemove === -1) {
-            return res.status(404).send({ msg: 'Cart item not found' });
-        }
-
-        // Remove the item from cartDetails array
-        cart.cartDetails.splice(indexToRemove, 1);
-        await cart.save();
-
-        // Fetch exchange rate based on user's selected currency
-        let exchangeRate = { rate: 1 };
-        let currencySymbol = "₹";
-
-        if (currency !== 'INR') {
-            const foundExchangeRate = await ExchangeRate.findOne({ currency });
-            if (foundExchangeRate) {
-                exchangeRate = foundExchangeRate;
-                currencySymbol = exchangeRate.symbol || currency;
-            } else {
-                return res.status(400).send({ msg: 'Currency not supported' });
-            }
-        }
-
-        // Calculate total price, total sale price, and delivery charge after item removal
-        let totalPrice = 0;
-        let totalSalePrice = 0;
-
-        cart.cartDetails.forEach(item => {
-            totalPrice += item.variantDetail.price * item.quantity;
-            totalSalePrice += item.variantDetail.salePrice * item.quantity;
-        });
-
-        // Convert the total price and sale price to the user's selected currency
-        totalPrice = totalPrice * exchangeRate.rate;
-        totalSalePrice = totalSalePrice * exchangeRate.rate;
-
-        // Calculate delivery charge based on the country and total price
-        let deliveryCharge = 0;
-        if (country === 'INDIA') {
-            if (totalPrice >= 0.01 && totalPrice <= 499.99) {
-                deliveryCharge = 99 * exchangeRate.rate;
-            } else if (totalPrice >= 500 && totalPrice <= 999.99) {
-                deliveryCharge = 59 * exchangeRate.rate;
-            }
-        } else {
-            if (totalPrice >= 0.01 && totalPrice <= 4177.78) {
-                deliveryCharge = 4178.62 * exchangeRate.rate;
-            } else if (totalPrice >= 4177.79 && totalPrice <= 16713.64) {
-                deliveryCharge = 3342.90 * exchangeRate.rate;
-            }
-        }
-
-        // Calculate total cart price
-        const totalCartPrice = deliveryCharge + (totalSalePrice !== 0 ? totalSalePrice : totalPrice);
-
-        // Send the response with updated data
-        res.status(200).send({
-            msg: 'Cart item removed successfully',
-            data: cart.cartDetails, // Updated cart details after removal
-            totalPrice: +totalPrice.toFixed(2),
-            totalSalePrice: +totalSalePrice.toFixed(2),
-            deliveryCharge: +deliveryCharge.toFixed(2),
-            totalCartPrice: +totalCartPrice.toFixed(2),
-            currency: currencySymbol
-        });
-    } catch (error) {
-        console.error('Error removing cart item:', error);
-        res.status(500).send({ msg: 'Internal server error, try again later' });
-    }
-});
-
-// Remove all cart items
-cartRoute.delete('/', verifyToken, async (req, res) => {
-    try {
-        const userID = req.userDetail._id;
-        await CartItem.deleteMany({ userID });
-
-        res.status(200).send({ msg: 'All cart items removed successfully' });
-    } catch (error) {
-        console.error('Error removing all cart items:', error);
-        res.status(500).send({ msg: 'Internal server error, try again later' });
-    }
-});
-
-// Get cart items for user (currency added)
-cartRoute.get('/', verifyToken, async (req, res) => {
-    try {
-        const userID = req.userDetail._id;
-        const cart = await CartItem.findOne({ userID });
-
-        if (!cart) {
-            return res.status(200).send({
-                msg: 'Cart items fetched successfully',
-                data: [],
-                totalCartPrice: 0.00,
-                deliveryCharge: 0.00,
-                totalPrice: 0.00,
-                currency: '₹'
-            });
-        }
-
-        // Fetch exchange rate based on user's selected currency
-        let exchangeRate = 1;
-        let currencySymbol = "₹";
-
-        const country = req.query.country || 'INDIA';
-        const currency = req.query.currency || 'INR';
-
-        if (currency !== 'INR') {
-            const foundExchangeRate = await ExchangeRate.findOne({ currency });
-            if (foundExchangeRate) {
-                exchangeRate = foundExchangeRate.rate;
-                currencySymbol = foundExchangeRate.symbol || currency;
-            } else {
-                return res.status(400).send({ msg: 'Currency not supported' });
-            }
-        }
-
-        // Calculate total cart price and adjust prices of cart items based on exchange rate and country selection
-        let totalPrice = 0;
-
-        cart.cartDetails.forEach(item => {
-            const variant = item.variantDetail;
-
-            const indianMRP = variant.price || 0;
-            const margin = variant.margin / 100 || 0.01;
-
-            if (country === 'INDIA') {
-                if (exchangeRate !== 1) { // Currency other than INR
-                    item.price = Number((indianMRP * exchangeRate).toFixed(2));
-                } else {
-                    item.price = Number(indianMRP.toFixed(2));
-                }
-            } else { // OUTSIDE INDIA
-                const priceWithMargin = indianMRP * (1 + margin);
-
-                item.price = Number((priceWithMargin * exchangeRate).toFixed(2));
-            }
-            item.currency = currencySymbol; // Set the currency symbol
-
-            // Calculate total price
-            totalPrice += item.price * item.quantity;
-        });
-
-        // Determine delivery charge
-        let deliveryCharge = 0;
-        if (country === 'INDIA') {
-            if (totalPrice >= 0.01 && totalPrice <= 499.99) {
-                deliveryCharge = 99;
-            } else if (totalPrice >= 500 && totalPrice <= 999.99) {
+            } else if (totalPrice >= 500 && totalPrice < 1000) {
                 deliveryCharge = 59;
             } else if (totalPrice >= 1000) {
-                deliveryCharge = 0; // Free delivery
+                deliveryCharge = 0;
             }
         } else {
-            if (totalPrice >= 0.01 && totalPrice <= 4177.78) {
+            if (totalPrice > 0 && totalPrice < 4177.78) {
                 deliveryCharge = 4178.62;
-            } else if (totalPrice >= 4177.79 && totalPrice <= 16713.64) {
+            } else if (totalPrice >= 4177.78 && totalPrice < 16713.64) {
                 deliveryCharge = 3342.90;
             } else if (totalPrice >= 16713.65) {
-                deliveryCharge = 0; // Free delivery
+                deliveryCharge = 0;
             }
         }
 
-        // Convert delivery charge if needed
-        if (exchangeRate !== 1) {
-            deliveryCharge = Number((deliveryCharge * exchangeRate).toFixed(2));
+        // Fetch exchange rate for the selected currency
+        let deliveryChargeInCurrency = deliveryCharge;
+        let symbol = '₹';
+        if (currency !== 'INR') {
+            const exchangeRate = await ExchangeRateModel.findOne({ currency: currency });
+            if (!exchangeRate) {
+                return res.status(404).json({ msg: 'Exchange rate not found for the selected currency' });
+            }
+            // Convert delivery charge to the selected currency
+            deliveryChargeInCurrency = (deliveryCharge * exchangeRate.rate).toFixed(2);
+
+            // Convert total price to the selected currency
+            totalPrice = (totalPrice * exchangeRate.rate).toFixed(2);
+            totalCartPrice = (parseFloat(totalPrice) + parseFloat(deliveryChargeInCurrency)).toFixed(2);
+
+            symbol = exchangeRate.currency === 'AED' ? exchangeRate.currency : exchangeRate.symbol;
+        } else {
+            // Calculate total cart price in INR
+            totalCartPrice = (totalPrice + deliveryCharge).toFixed(2);
         }
 
-        // Calculate total cart price
-        const totalCartPrice = deliveryCharge + totalPrice;
+        // Convert numbers to strings with two decimal places
+        totalPrice = parseFloat(totalPrice).toFixed(2);
+        deliveryChargeInCurrency = parseFloat(deliveryChargeInCurrency).toFixed(2);
+        totalCartPrice = parseFloat(totalCartPrice).toFixed(2);
 
-        res.status(200).send({
-            msg: 'Cart items fetched successfully',
-            data: cart.cartDetails,
-            totalCartPrice: +totalCartPrice.toFixed(2),
-            deliveryCharge: +deliveryCharge.toFixed(2),
-            totalPrice: +totalPrice.toFixed(2),
-            currency: currencySymbol
+        // Send the response with calculated prices and currency
+        res.status(200).json({
+            msg: 'Product variant added to cart from wishlist',
+            data: cart,
+            totalPrice: totalPrice.toString(),
+            deliveryCharge: deliveryChargeInCurrency.toString(),
+            totalCartPrice: totalCartPrice.toString(),
+            currency: symbol
         });
     } catch (error) {
-        console.error('Error fetching cart items:', error);
-        res.status(500).send({ msg: 'Internal server error, try again later' });
+        console.error('Error adding product variant from wishlist to cart:', error);
+        res.status(500).json({ msg: 'Internal server error, try again later' });
     }
 });
 
-module.exports = cartRoute;
+// Add a single item from the wishlist to the cart
+router.post('/add-from-wishlist', verifyToken, async (req, res) => {
+    const userID = req.userDetail._id;
+    const { productID, variantID, country = 'INDIA', currency = 'INR' } = req.body;
+
+    try {
+        const wishlist = await WishlistItem.findOne({ userID });
+
+        if (!wishlist) {
+            return res.status(404).json({ msg: 'Wishlist not found' });
+        }
+
+        const wishlistItem = wishlist.items.find(item => item.productID.toString() === productID && item.variantID.toString() === variantID);
+
+        if (!wishlistItem) {
+            return res.status(404).json({ msg: 'Item not found in wishlist' });
+        }
+
+        const product = await ProductModel.findById(productID);
+        if (!product) {
+            return res.status(404).json({ msg: 'Product not found' });
+        }
+
+        const variant = product.variants.id(variantID);
+        if (!variant) {
+            return res.status(404).json({ msg: 'Variant not found' });
+        }
+
+        let cart = await CartModel.findOne({ userID });
+        if (!cart) {
+            cart = new CartModel({ userID, cartDetails: [] });
+        }
+
+        const itemExists = cart.cartDetails.some(item => item.productID.toString() === productID && item.variantID.toString() === variantID);
+        if (itemExists) {
+            return res.status(400).json({ msg: 'Product variant already in cart' });
+        }
+
+        cart.cartDetails.push({
+            productID,
+            variantID,
+            quantity: 1,  // Assuming default quantity of 1
+            productDetail: {
+                title: product.title,
+                slug: product.slug,
+                generic: product.generic,
+                treatment: product.treatment,
+                isReturnable: product.isReturnable,
+                isPrescriptionRequired: product.isPrescriptionRequired,
+                isVisible: product.isVisible,
+                shortDescription: product.shortDescription,
+                description: product.description,
+                sideEffects: product.sideEffects,
+                faq: product.faq,
+                additionalInformation: product.additionalInformation,
+                moreInformation: product.moreInformation,
+                purchaseNote: product.purchaseNote,
+                categoryID: product.categoryID,
+                tags: product.tags,
+                upSell: product.upSell,
+                crossSell: product.crossSell,
+                externalLink: product.externalLink,
+                position: product.position,
+                manufacturerID: product.manufacturerID,
+                originCountry: product.originCountry,
+                isDiscontinued: product.isDiscontinued,
+                metaTitle: product.metaTitle,
+                metaDescription: product.metaDescription,
+                metaTags: product.metaTags,
+            },
+            variantDetail: {
+                sku: variant.sku,
+                packSize: variant.packSize,
+                isStockAvailable: variant.isStockAvailable,
+                currency: variant.currency,
+                price: variant.price,
+                salePrice: variant.salePrice,
+                margin: variant.margin,
+                minOrderQuantity: variant.minOrderQuantity,
+                maxOrderQuantity: variant.maxOrderQuantity,
+                weight: variant.weight,
+                weightUnit: variant.weightUnit,
+                length: variant.length,
+                lengthUnit: variant.lengthUnit,
+                width: variant.width,
+                widthUnit: variant.widthUnit,
+                height: variant.height,
+                heightUnit: variant.heightUnit,
+            }
+        });
+
+        // Calculate the total price of the cart
+        let totalPrice = cart.cartDetails.reduce((total, item) => {
+            let itemPrice;
+
+            if (country === 'INDIA') {
+                itemPrice = item.variantDetail.salePrice !== 0 ? item.variantDetail.salePrice : item.variantDetail.price;
+            } else {
+                // For non-India, calculate price with margin
+                itemPrice = item.variantDetail.salePrice !== 0 ?
+                    (item.variantDetail.salePrice + (item.variantDetail.salePrice * item.variantDetail.margin / 100)) :
+                    (item.variantDetail.price + (item.variantDetail.price * item.variantDetail.margin / 100));
+            }
+
+            return total + itemPrice * item.quantity;
+        }, 0);
+
+        // Determine delivery charge based on country
+        let deliveryCharge = 0;
+        if (country === 'INDIA') {
+            if (totalPrice > 0 && totalPrice < 500) {
+                deliveryCharge = 99;
+            } else if (totalPrice >= 500 && totalPrice < 1000) {
+                deliveryCharge = 59;
+            } else if (totalPrice >= 1000) {
+                deliveryCharge = 0;
+            }
+        } else {
+            if (totalPrice > 0 && totalPrice < 4177.78) {
+                deliveryCharge = 4178.62;
+            } else if (totalPrice >= 4177.78 && totalPrice < 16713.64) {
+                deliveryCharge = 3342.90;
+            } else if (totalPrice >= 16713.65) {
+                deliveryCharge = 0;
+            }
+        }
+
+        // Fetch exchange rate for the selected currency
+        let deliveryChargeInCurrency = deliveryCharge;
+        let symbol = '₹';
+        if (currency !== 'INR') {
+            const exchangeRate = await ExchangeRateModel.findOne({ currency: currency });
+            if (!exchangeRate) {
+                return res.status(404).json({ message: 'Exchange rate not found for the selected currency' });
+            }
+            // Convert delivery charge to the selected currency
+            deliveryChargeInCurrency = (deliveryCharge * exchangeRate.rate).toFixed(2);
+
+            // Convert total price to the selected currency
+            totalPrice = (totalPrice * exchangeRate.rate).toFixed(2);
+            totalCartPrice = (parseFloat(totalPrice) + parseFloat(deliveryChargeInCurrency)).toFixed(2);
+
+            symbol = exchangeRate.currency === 'AED' ? exchangeRate.currency : exchangeRate.symbol;
+        } else {
+            // Calculate total cart price in INR
+            totalCartPrice = (totalPrice + deliveryCharge).toFixed(2);
+        }
+
+        // Convert numbers to strings with two decimal places
+        totalPrice = parseFloat(totalPrice).toFixed(2);
+        deliveryChargeInCurrency = parseFloat(deliveryChargeInCurrency).toFixed(2);
+        totalCartPrice = parseFloat(totalCartPrice).toFixed(2);
+
+        // Save the updated cart
+        await cart.save();
+
+        // Send the response with calculated prices and currency
+        res.status(200).json({
+            message: 'Item added to cart successfully',
+            cart: {
+                ...cart.toObject(),
+                totalPrice: totalPrice.toString(),
+                deliveryCharge: deliveryChargeInCurrency.toString(),
+                totalCartPrice: totalCartPrice.toString(),
+                currency: symbol
+            }
+        });
+
+    } catch (error) {
+        console.log("Error while adding item from wishlist to cart", error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
+
+
+module.exports = router;
