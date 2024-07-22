@@ -83,12 +83,12 @@ app.use('/ah/api/v1/currency', currencyRouter);
 
 
 // HTTPS Server Configuration
-// const privateKey = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/privkey.pem', 'utf8');
-// const certificate = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/cert.pem', 'utf8');
-// const credentials = { key: privateKey, cert: certificate };
+const privateKey = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/privkey.pem', 'utf8');
+const certificate = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/cert.pem', 'utf8');
+const credentials = { key: privateKey, cert: certificate };
 
-// // Starting HTTPS Server
-// const httpsServer = https.createServer(credentials, app);
+// Starting HTTPS Server
+const httpsServer = https.createServer(credentials, app);
 
 
 const fetchAndUpdateRates = async () => {
@@ -123,7 +123,7 @@ const fetchAndUpdateRates = async () => {
 cron.schedule('0 */6 * * *', fetchAndUpdateRates);
 
 
-app.listen(Port, async () => {
+httpsServer.listen(Port, async () => {
     try {
         await DBConnection;
         console.log(`Connected to DB`);
