@@ -79,6 +79,18 @@ genericRoute.get('/', async (req, res) => {
     }
 });
 
+// GET all generics
+genericRoute.get('/names', async (req, res) => {
+    try {
+        const generics = await GenericModel.find().select('name');
+
+        res.status(200).send(generics);
+    } catch (error) {
+        console.error('Error fetching generics:', error);
+        return res.status(500).json({ msg: 'Internal server error, try again later' });
+    }
+});
+
 // GET a generic by ID (with all products who have the same genericID)
 genericRoute.get('/:id', async (req, res) => {
     try {

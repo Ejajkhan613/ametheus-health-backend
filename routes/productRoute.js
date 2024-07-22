@@ -1,5 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const path = require('path');
+const crypto = require('crypto');
 const fileUpload = require('express-fileupload');
 const xlsx = require('xlsx');
 const { check, validationResult } = require('express-validator');
@@ -248,6 +250,10 @@ const productValidationRules = [
 
 // Route to create a new product
 productRoute.post('/', verifyToken, productValidationRules, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).send({ msg: 'Access Denied' });
+    }
+
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -255,18 +261,61 @@ productRoute.post('/', verifyToken, productValidationRules, async (req, res) => 
     }
 
     try {
-        req.body.slug = await createSlug(req.body.title);
-        const product = new ProductModel(req.body);
+        const data = req.body;
+        delete data._id;
+        delete data.images;
+        delete data.__v;
+        delete data.createdAt;
+        delete data.updatedAt;
+
+        data.slug = await createSlug(data.title);
+        const product = new ProductModel(data);
         await product.save();
-        res.status(201).send({ msg: 'Product created successfully', data: product });
+        res.status(201).send({ msg: 'Product created successfully', product });
     } catch (error) {
         console.error('Error creating product:', error);
         res.status(500).send({ msg: 'Internal server error, try again later' });
     }
 });
 
-// Route to update/add images to a product
-productRoute.patch('/:id/images', verifyToken, async (req, res) => {
+// Route to update a product by ID
+productRoute.patch('/:id', verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).send({ msg: 'Access Denied' });
+    }
+
+    try {
+        const data = req.body;
+        delete data._id;
+        delete data.slug;
+        delete data.images;
+        delete data.__v;
+        delete data.createdAt;
+        delete data.updatedAt;
+
+        if (data.variants) {
+            data.variants.map(item => {
+                delete item._id;
+            })
+        }
+
+        const product = await ProductModel.findByIdAndUpdate(req.params.id, data, { new: true });
+        if (!product) {
+            return res.status(404).send({ msg: 'Product not found' });
+        }
+        res.status(200).send({ msg: 'Product updated successfully', data: product });
+    } catch (error) {
+        console.error('Error updating product:', error);
+        res.status(500).send({ msg: 'Internal server error, try again later' });
+    }
+});
+
+// Route to add new images to a product
+productRoute.post('/:id/images', verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).send({ msg: 'Access Denied' });
+    }
+
     try {
         const product = await ProductModel.findById(req.params.id);
         if (!product) {
@@ -275,18 +324,12 @@ productRoute.patch('/:id/images', verifyToken, async (req, res) => {
 
         const files = req.files;
         if (!files || Object.keys(files).length === 0) {
-            return res.status(400).send({ msg: 'No files were uploaded.' });
+            return res.status(400).send({ msg: 'No images provided.' });
         }
 
-        // Remove existing images from S3
-        const deletePromises = product.images.map(async (image) => {
-            await deleteFromS3(image.key);
-        });
-        await Promise.all(deletePromises);
-
         // Upload new images to S3
-        const uploadPromises = Object.keys(files).map(async (key) => {
-            const file = files[key];
+        const uploadPromises = files.images.map(async (key) => {
+            const file = key;
             const s3Key = generateKey(file.name);
             const uploadResult = await uploadToS3(file.data, s3Key, file.mimetype);
             return { url: uploadResult.Location, key: s3Key, alt: file.name };
@@ -294,32 +337,101 @@ productRoute.patch('/:id/images', verifyToken, async (req, res) => {
 
         const newImages = await Promise.all(uploadPromises);
 
-        // Update product with new images
-        product.images = newImages;
+        // Add new images to product
+        product.images.push(...newImages);
         await product.save();
 
-        res.status(200).send({ msg: 'Images updated successfully', data: product.images });
+        res.status(200).send({ msg: 'Images added successfully', data: product.images });
     } catch (error) {
-        console.error('Error updating images:', error);
+        console.error('Error adding images:', error);
+        res.status(500).send({ msg: 'Internal server error, try again later' });
+    }
+});
+
+// Route to delete a single image by its key
+productRoute.delete('/:id/single-images', verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).send({ msg: 'Access Denied' });
+    }
+
+    try {
+        const product = await ProductModel.findById(req.params.id);
+        if (!product) {
+            return res.status(404).send({ msg: 'Product not found' });
+        }
+
+        const imageKey = req.body.key;
+        const imageIndex = product.images.findIndex(image => image.key === imageKey);
+        if (imageIndex === -1) {
+            return res.status(404).send({ msg: 'Image not found' });
+        }
+
+        // Remove image from S3
+        await deleteFromS3(imageKey);
+
+        // Remove image from product
+        product.images.splice(imageIndex, 1);
+        await product.save();
+
+        res.status(200).send({ msg: 'Image deleted successfully', data: product.images });
+    } catch (error) {
+        console.error('Error deleting image:', error);
+        res.status(500).send({ msg: 'Internal server error, try again later' });
+    }
+});
+
+// Route to delete all images of a product
+productRoute.delete('/:id/images', verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).send({ msg: 'Access Denied' });
+    }
+
+    try {
+        const product = await ProductModel.findById(req.params.id);
+        if (!product) {
+            return res.status(404).send({ msg: 'Product not found' });
+        }
+
+        // Remove all images from S3
+        const deletePromises = product.images.map(async (image) => {
+            await deleteFromS3(image.key);
+        });
+        await Promise.all(deletePromises);
+
+        // Clear images from product
+        product.images = [];
+        await product.save();
+
+        res.status(200).send({ msg: 'All images deleted successfully', data: product });
+    } catch (error) {
+        console.error('Error deleting all images:', error);
         res.status(500).send({ msg: 'Internal server error, try again later' });
     }
 });
 
 // Route to delete a product and its images from S3
 productRoute.delete('/:id', verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).send({ msg: 'Access Denied' });
+    }
+
     try {
         const product = await ProductModel.findByIdAndDelete(req.params.id);
         if (!product) {
             return res.status(404).send({ msg: 'Product not found' });
         }
 
+        const regex = new RegExp('amazonaws.com');;
+
         // Remove images from S3
         const deletePromises = product.images.map(async (image) => {
-            await deleteFromS3(image.key);
+            if (regex.test(image)) {
+                await deleteFromS3(image.key);
+            }
         });
         await Promise.all(deletePromises);
 
-        res.status(200).send({ msg: 'Product and its images deleted successfully' });
+        res.status(200).send({ msg: 'Product deleted successfully' });
     } catch (error) {
         console.error('Error deleting product:', error);
         res.status(500).send({ msg: 'Internal server error, try again later' });
@@ -691,34 +803,5 @@ productRoute.get('/slug/:slug', async (req, res) => {
         res.status(500).send({ msg: 'Internal server error, try again later' });
     }
 });
-
-// Route to update a product by ID
-productRoute.put('/:id', verifyToken, async (req, res) => {
-    try {
-        const payload = req.body;
-
-        delete payload.image;
-        delete payload.docFileURL;
-        delete payload._id;
-        delete payload.createdAt;
-        delete payload.lastModified;
-        delete payload.__v;
-        delete payload.children;
-
-        if (payload.slug) {
-
-        }
-
-        const product = await ProductModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        if (!product) {
-            return res.status(404).send({ msg: 'Product not found' });
-        }
-        res.status(200).send({ msg: 'Product updated successfully', data: product });
-    } catch (error) {
-        console.error('Error updating product:', error);
-        res.status(500).send({ msg: 'Internal server error, try again later' });
-    }
-});
-
 
 module.exports = productRoute;
