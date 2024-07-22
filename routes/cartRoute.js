@@ -60,6 +60,7 @@ router.post('/', verifyToken, async (req, res) => {
                 productDetail: {
                     title: product.title,
                     slug: product.slug,
+                    images: product.images,
                     generic: product.generic,
                     treatment: product.treatment,
                     isReturnable: product.isReturnable,
@@ -526,8 +527,8 @@ router.post('/add-from-wishlist', verifyToken, async (req, res) => {
     }
 });
 
-// Add a single item from the wishlist to the cart
-router.post('/add-from-wishlist', verifyToken, async (req, res) => {
+// Add all products from the wishlist to the cart
+router.post('/add-one-wishlist', verifyToken, async (req, res) => {
     const userID = req.userDetail._id;
     const { productID, variantID, country = 'INDIA', currency = 'INR' } = req.body;
 
@@ -571,6 +572,7 @@ router.post('/add-from-wishlist', verifyToken, async (req, res) => {
             productDetail: {
                 title: product.title,
                 slug: product.slug,
+                images: product.images,
                 generic: product.generic,
                 treatment: product.treatment,
                 isReturnable: product.isReturnable,
