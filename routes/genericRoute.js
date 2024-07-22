@@ -80,7 +80,7 @@ genericRoute.get('/', async (req, res) => {
 });
 
 // GET all generics
-genericRoute.get('/names', async (req, res) => {
+genericRoute.get('/names', verifyToken, async (req, res) => {
     try {
         const generics = await GenericModel.find().select('name');
 
