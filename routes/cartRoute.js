@@ -318,9 +318,9 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
 
         // Save cart details to the database for the authenticated user
         const userCart = await CartModel.findOneAndUpdate(
-            { userId: userId },
+            { userID: userId },
             {
-                userId: userId,
+                userID: userId,
                 items: cartDetails,
                 totalPrice,
                 deliveryCharge: deliveryChargeInCurrency,
