@@ -8,7 +8,7 @@ const ExchangeRateModel = require('../models/currencyPriceModel');
 
 // Route to process multiple products (Not Authorized)
 router.post('/batch', async (req, res) => {
-    const { items, country = "INDIA", currency = "INR" } = req.body;
+    const { itemss, country = "INDIA", currency = "INR" } = req.body;
 
     try {
         // Fetch exchange rate for the selected currency if it's not INR
@@ -21,7 +21,7 @@ router.post('/batch', async (req, res) => {
         }
 
         // Process each item in the batch
-        const cartDetails = await Promise.all(items.map(async ({ productID, variantID, quantity }) => {
+        const cartDetails = await Promise.all(itemss.map(async ({ productID, variantID, quantity }) => {
             // Fetch the product by productID
             const product = await ProductModel.findById(productID);
             if (!product) {
@@ -170,7 +170,7 @@ router.post('/batch', async (req, res) => {
 
 // Route to process multiple products for authenticated users
 router.post('/batch-loggedin', verifyToken, async (req, res) => {
-    const { items, country = "INDIA", currency = "INR" } = req.body;
+    const { itemss, country = "INDIA", currency = "INR" } = req.body;
     const userId = req.userDetail._id;
 
     try {
@@ -184,7 +184,7 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
         }
 
         // Process each item in the batch
-        const cartDetails = await Promise.all(items.map(async ({ productID, variantID, quantity }) => {
+        const cartDetails = await Promise.all(itemss.map(async ({ productID, variantID, quantity }) => {
             // Fetch the product by productID
             const product = await ProductModel.findById(productID);
             if (!product) {
