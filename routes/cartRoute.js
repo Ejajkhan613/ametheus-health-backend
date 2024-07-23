@@ -168,7 +168,6 @@ router.post('/batch', async (req, res) => {
     }
 });
 
-// Route to process multiple products for authenticated users
 router.post('/batch-loggedin', verifyToken, async (req, res) => {
     const { itemss, country = "INDIA", currency = "INR" } = req.body;
     const userId = req.userDetail._id;
@@ -321,7 +320,7 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
             { userID: userId },
             {
                 userID: userId,
-                items: cartDetails,
+                cartDetails,
                 totalPrice,
                 deliveryCharge: deliveryChargeInCurrency,
                 totalCartPrice,
