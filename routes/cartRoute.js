@@ -197,7 +197,7 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
             }
 
             // Check if the product and variant meet the required conditions
-            if (!variant.isStockAvailable || variant.price === 0 || !product.isVisible) {
+            if (!variant.isStockAvailable || variant.price === 0 || !product.isVisible || product.isDiscontinued) {
                 return { productID, variantID, quantity, error: 'This Medicine cannot be added due to stock, price, or visibility constraints' };
             }
 
@@ -224,14 +224,10 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
                 }
             }
 
-            const totalPrice = (itemPrice * quantity).toFixed(2);
-
             return {
                 productID,
                 variantID,
                 quantity,
-                price: itemPrice,
-                totalPrice,
                 productDetail: {
                     title: product.title,
                     slug: product.slug,
@@ -279,64 +275,15 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
                     widthUnit: variant.widthUnit,
                     height: variant.height,
                     heightUnit: variant.heightUnit,
-                },
-                currency: exchangeRate.symbol
+                }
             };
         }));
 
-        // Calculate total price and delivery charge
-        const totalPrice = cartDetails.reduce((total, item) => total + parseFloat(item.totalPrice || 0), 0).toFixed(2);
-
-        // Determine delivery charge based on country
-        let deliveryCharge = 0;
-        if (country === 'INDIA') {
-            if (totalPrice > 0 && totalPrice < 500) {
-                deliveryCharge = 99;
-            } else if (totalPrice >= 500 && totalPrice < 1000) {
-                deliveryCharge = 59;
-            } else if (totalPrice >= 1000) {
-                deliveryCharge = 0;
-            }
-        } else {
-            if (totalPrice > 0 && totalPrice < 4177.78) {
-                deliveryCharge = 4178.62;
-            } else if (totalPrice >= 4177.78 && totalPrice < 16713.64) {
-                deliveryCharge = 3342.90;
-            } else if (totalPrice >= 16713.65) {
-                deliveryCharge = 0;
-            }
-        }
-
-        // Convert delivery charge to the selected currency
-        let deliveryChargeInCurrency = deliveryCharge;
-        if (currency !== 'INR') {
-            deliveryChargeInCurrency = (deliveryCharge * exchangeRate.rate).toFixed(2);
-        }
-
-        const totalCartPrice = (parseFloat(totalPrice) + parseFloat(deliveryChargeInCurrency)).toFixed(2);
-
-        // Save cart details to the database for the authenticated user
-        const userCart = await CartModel.findOneAndUpdate(
-            { userID: userId },
-            {
-                userID: userId,
-                cartDetails,
-                totalPrice,
-                deliveryCharge: deliveryChargeInCurrency,
-                totalCartPrice,
-                currency: exchangeRate.symbol
-            },
-            { upsert: true, new: true }
-        );
+        await CartModel.findOneAndUpdate({ userID: userId }, { cartDetails }, { upsert: true, new: true });
 
         // Send response
         res.status(200).json({
-            cart: cartDetails,
-            totalPrice,
-            deliveryCharge: deliveryChargeInCurrency,
-            totalCartPrice,
-            currency: exchangeRate.symbol,
-            userCart // Include saved cart information
+            msg: 'Success'
         });
 
     } catch (error) {

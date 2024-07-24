@@ -27,7 +27,7 @@ const s3 = new S3Client({
     },
 });
 
-// Function to handle file uploads to S3
+// handle file uploads to S3
 const uploadFile = async (file) => {
     const fileContent = Buffer.from(file.buffer, 'binary');
     const params = {
@@ -48,7 +48,7 @@ const uploadFile = async (file) => {
     }
 };
 
-// Function to verify payment signature
+// verify payment signature
 const verifyPayment = (orderId, paymentId, signature) => {
     const generatedSignature = crypto.createHmac('sha256', 'YOUR_RAZORPAY_KEY_SECRET')
         .update(`${orderId}|${paymentId}`)
@@ -66,10 +66,10 @@ const createOrder = async (totalCartPrice, currency) => {
     });
 };
 
-// Endpoint to create Razorpay order
+// create Razorpay order
 router.post('/create-order', verifyToken, async (req, res) => {
     try {
-        const { country = 'India', currency = 'INR' } = req.body;
+        const { country = 'INDIA', currency = 'INR' } = req.body;
         const userID = req.userDetail._id;
 
         // Calculate total cart price based on the provided userID and country
