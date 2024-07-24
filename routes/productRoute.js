@@ -327,11 +327,11 @@ productRoute.post('/:id/images', verifyToken, async (req, res) => {
             return res.status(400).send({ msg: 'No images provided.' });
         }
 
-        console.log(files.images);
+        // Ensure files.images is an array
+        let imagesArray = Array.isArray(files.images) ? files.images : [files.images];
 
         // Upload new images to S3
-        const uploadPromises = files.images.map(async (key) => {
-            const file = key;
+        const uploadPromises = imagesArray.map(async (file) => {
             const s3Key = generateKey(file.name);
             const uploadResult = await uploadToS3(file.data, s3Key, file.mimetype);
             return { url: uploadResult.Location, key: s3Key, alt: file.name };
@@ -349,6 +349,7 @@ productRoute.post('/:id/images', verifyToken, async (req, res) => {
         res.status(500).send({ msg: 'Internal server error, try again later' });
     }
 });
+
 
 // Route to delete a single image by its key
 productRoute.delete('/:id/single-images', verifyToken, async (req, res) => {
