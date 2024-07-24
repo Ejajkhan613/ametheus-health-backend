@@ -327,7 +327,7 @@ productRoute.post('/:id/images', verifyToken, async (req, res) => {
             return res.status(400).send({ msg: 'No images provided.' });
         }
 
-        console.log(files);
+        console.log(files.images);
 
         // Upload new images to S3
         const uploadPromises = files.images.map(async (key) => {
