@@ -1,3 +1,4 @@
+// utils/cartUtils.js
 const ExchangeRate = require('../models/currencyPriceModel'); // Import the ExchangeRate model
 const CartItem = require('../models/cartModel'); // Import the Cart model
 

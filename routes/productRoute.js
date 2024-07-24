@@ -350,9 +350,8 @@ productRoute.post('/:id/images', verifyToken, async (req, res) => {
     }
 });
 
-
-// Route to delete a single image by its key
-productRoute.delete('/:id/single-images', verifyToken, async (req, res) => {
+// Route to delete a single image by its _id
+productRoute.delete('/:id/single-image/:imageId', verifyToken, async (req, res) => {
     if (req.userDetail.role !== "admin") {
         return res.status(400).send({ msg: 'Access Denied' });
     }
@@ -363,11 +362,13 @@ productRoute.delete('/:id/single-images', verifyToken, async (req, res) => {
             return res.status(404).send({ msg: 'Product not found' });
         }
 
-        const imageKey = req.body.key;
-        const imageIndex = product.images.findIndex(image => image.key === imageKey);
+        const imageId = req.params.imageId;
+        const imageIndex = product.images.findIndex(image => image._id.toString() === imageId);
         if (imageIndex === -1) {
             return res.status(404).send({ msg: 'Image not found' });
         }
+
+        const imageKey = product.images[imageIndex].key;
 
         // Remove image from S3
         await deleteFromS3(imageKey);
@@ -382,6 +383,7 @@ productRoute.delete('/:id/single-images', verifyToken, async (req, res) => {
         res.status(500).send({ msg: 'Internal server error, try again later' });
     }
 });
+
 
 // Route to delete all images of a product
 productRoute.delete('/:id/images', verifyToken, async (req, res) => {
