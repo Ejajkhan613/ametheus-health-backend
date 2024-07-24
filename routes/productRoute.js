@@ -364,6 +364,7 @@ productRoute.delete('/:id/single-image/:imageId', verifyToken, async (req, res) 
 
         const imageId = req.params.imageId;
         const imageIndex = product.images.findIndex(image => image._id.toString() === imageId);
+        console.log(imageIndex);
         if (imageIndex === -1) {
             return res.status(404).send({ msg: 'Image not found' });
         }
