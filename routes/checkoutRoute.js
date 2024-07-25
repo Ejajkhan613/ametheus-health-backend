@@ -91,19 +91,19 @@ router.post('/create-order',
     verifyToken,
     upload.fields([{ name: 'prescriptionImage', maxCount: 1 }, { name: 'passportImage', maxCount: 1 }]),
     [
-        body('name').isString().notEmpty(),
+        body('name').isString().notEmpty().withMessage('Name is required'),
         body('companyName').isString().optional(),
-        body('country').isString().notEmpty(),
-        body('streetAddress').isString().notEmpty(),
-        body('city').isString().notEmpty(),
-        body('state').isString().notEmpty(),
-        body('pincode').isString().notEmpty(),
-        body('mobile').isString().notEmpty(),
-        body('email').isEmail().notEmpty(),
-        body('age').isInt({ min: 0 }).notEmpty(),
+        body('country').isString().notEmpty().withMessage('Country is required'),
+        body('streetAddress').isString().notEmpty().withMessage('Street address is required'),
+        body('city').isString().notEmpty().withMessage('City is required'),
+        body('state').isString().notEmpty().withMessage('State is required'),
+        body('pincode').isString().notEmpty().withMessage('Pincode is required'),
+        body('mobile').isString().notEmpty().withMessage('Mobile number is required'),
+        body('email').isEmail().notEmpty().withMessage('Valid email is required'),
+        body('age').isInt({ min: 0 }).notEmpty().withMessage('Age is required and must be a positive integer'),
         body('bloodPressure').isString().optional(),
         body('orderNotes').isString().optional(),
-        body('currency').isIn(['INR', 'USD', 'EUR', 'GBP', 'AED', 'RUB']).notEmpty()
+        body('currency').isIn(['INR', 'USD', 'EUR', 'GBP', 'AED', 'RUB']).withMessage('Invalid currency')
     ],
     async (req, res) => {
         const errors = validationResult(req);
@@ -113,8 +113,8 @@ router.post('/create-order',
 
         try {
             const {
-                name, companyName, country, streetAddress, city, state, pincode, mobile, email, age, bloodPressure, weight = "", weightUnit = "KG",
-                orderNotes, currency
+                name, companyName, country, streetAddress, city, state, pincode, mobile, email, age, bloodPressure,
+                weight = "", weightUnit = "KG", orderNotes, currency
             } = req.body;
 
             const userID = req.userDetail._id;
@@ -130,6 +130,7 @@ router.post('/create-order',
             let prescriptionURL = '';
             let passportURL = '';
 
+            // Check if prescription image is required and handle file upload
             if (requiresPrescription && !req.files['prescriptionImage']) {
                 return res.status(400).send('Prescription image is required for some products in your cart.');
             }
@@ -143,7 +144,7 @@ router.post('/create-order',
             }
 
             // Create Razorpay order
-            const order = await createOrder(totalPrice, currency);
+            const razorpayOrder = await createOrder(totalPrice, currency);
 
             // Save the order details in the database
             const newOrder = new Order({
@@ -168,7 +169,7 @@ router.post('/create-order',
                 totalPrice,
                 status: "Pending", // Set status to Pending initially
                 paymentGateway: {
-                    orderId: order.id // Save Razorpay order ID
+                    orderId: razorpayOrder.id // Save Razorpay order ID
                 },
                 userID,
                 prescriptionURL,
@@ -180,10 +181,10 @@ router.post('/create-order',
 
             // Respond with order details
             res.json({
-                orderId: order.id,
+                orderId: razorpayOrder.id,
                 currency,
                 amount: totalPrice,
-                key_id: process.env.RZPY_KEY_ID_AH
+                key_id: process.env.RZPY_KEY_ID_AH // Razorpay key ID
             });
         } catch (error) {
             console.error('Error creating order:', error);
