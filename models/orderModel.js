@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const orderSchema = new mongoose.Schema({
   userID: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User', // Assuming you have a User model
+    ref: 'User',
     required: true,
   },
   name: {
@@ -75,7 +75,7 @@ const orderSchema = new mongoose.Schema({
   products: [{
     productID: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Product', // Assuming you have a Product model
+      ref: 'Product',
       required: true,
     },
     quantity: {
@@ -84,7 +84,7 @@ const orderSchema = new mongoose.Schema({
     },
     variantID: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Variant', // Assuming you have a Variant model
+      ref: 'Variant',
       default: null,
     },
   }],
@@ -106,8 +106,12 @@ const orderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Pending', 'Completed', 'Failed'],
+    enum: ['Pending', 'Accepted', 'Rejected', 'Processing Order', 'Shipped', 'Delivered'],
     default: 'Pending',
+  },
+  trackingLink: {
+    type: String,
+    default: null,
   },
   payment: {
     orderId: {

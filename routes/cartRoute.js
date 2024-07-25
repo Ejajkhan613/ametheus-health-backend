@@ -633,7 +633,8 @@ router.get('/', verifyToken, async (req, res) => {
                     ...item.variantDetail,
                     price: convertedPrice,
                     salePrice: convertedSalePrice,
-                    currency: exchangeRate.currency === 'AED' ? exchangeRate.currency : exchangeRate.symbol
+                    currency: exchangeRate.currency === 'AED' ? exchangeRate.currency : exchangeRate.symbol,
+                    currencyCode: exchangeRate.currency
                 }
             };
         });

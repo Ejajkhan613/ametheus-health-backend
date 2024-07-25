@@ -26,7 +26,7 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
 
             if (country !== 'India') {
                 const margin = variantDetail.margin || 0;
-                itemPrice = itemPrice + (itemPrice * margin / 100);
+                itemPrice += (itemPrice * margin / 100);
             }
 
             totalCartPrice += itemPrice * quantity;
