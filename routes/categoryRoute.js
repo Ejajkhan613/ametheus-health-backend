@@ -432,13 +432,15 @@ categoryRoute.get('/hierarchy', async (req, res) => {
     }
 });
 
-// Get Category Hierarchy names and id's with product count if data=all
 categoryRoute.get('/hierarchy-names', async (req, res) => {
     try {
-        const { data } = req.query;
+        const { data, search } = req.query;
 
-        // Fetch categories with only _id and name fields
-        const categories = await Category.find({}, '_id name parent slug image').lean();
+        // Build query object for searching by name
+        const searchQuery = search ? { name: { $regex: search, $options: 'i' } } : {};
+
+        // Fetch categories with only _id and name fields, filtered by search if provided
+        const categories = await Category.find(searchQuery, '_id name parent slug image').lean();
 
         // If data=all, include product counts
         let productCounts = [];
@@ -493,6 +495,7 @@ categoryRoute.get('/hierarchy-names', async (req, res) => {
         return res.status(500).send({ msg: 'Internal server error, try again later' });
     }
 });
+
 
 // Get Category by its id (currency added)
 categoryRoute.get('/:id', async (req, res) => {

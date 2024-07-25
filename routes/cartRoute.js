@@ -551,7 +551,6 @@ router.get('/', verifyToken, async (req, res) => {
 
         // Calculate the total price of the cart
         let totalPrice = cart.cartDetails.reduce((total, item) => {
-            // console.log(item);
             let itemPrice;
             if (country === "INDIA") {
                 if (currency !== "INR") {
