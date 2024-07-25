@@ -134,7 +134,7 @@ router.post('/create-order',
             if (requiresPrescription && !req.files['prescriptionImage']) {
                 return res.status(400).send('Prescription image is required for some products in your cart.');
             }
-
+            console.log(req.files);
             if (req.files['prescriptionImage']) {
                 prescriptionURL = await uploadFile(req.files['prescriptionImage'][0]);
             }
