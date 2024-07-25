@@ -119,7 +119,7 @@ const fetchAndUpdateRates = async () => {
 };
 
 
-// Schedule the cron job to run every 6 hours
+// Scheduled the cron job to run every 6 hours
 cron.schedule('0 */6 * * *', fetchAndUpdateRates);
 
 
