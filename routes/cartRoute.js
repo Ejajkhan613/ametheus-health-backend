@@ -552,19 +552,20 @@ router.get('/', verifyToken, async (req, res) => {
         // Calculate the total price of the cart
         let totalPrice = cart.cartDetails.reduce((total, item) => {
             let itemPrice;
-
-            if (country === 'INDIA') {
-                itemPrice = item.variantDetail.salePrice !== 0 ? item.variantDetail.salePrice : item.variantDetail.price;
+            if (country === "INDIA") {
+                if (currency !== "INR") {
+                    itemPrice = variant.salePrice !== 0 ? (variant.salePrice * exchangeRate.rate).toFixed(2) : (variant.price * exchangeRate.rate).toFixed(2);
+                } else {
+                    itemPrice = variant.salePrice !== 0 ? variant.salePrice.toFixed(2) : variant.price.toFixed(2);
+                }
             } else {
-                // For non-India, calculate price with margin
-                const marginPercentage = item.variantDetail.margin / 100;
-                itemPrice = item.variantDetail.salePrice !== 0 ?
-                    ((item.variantDetail.salePrice + (item.variantDetail.salePrice * marginPercentage))).toFixed(2) :
-                    ((item.variantDetail.price + (item.variantDetail.price * marginPercentage))).toFixed(2);
-            }
-
-            if (currency !== 'INR') {
-                itemPrice = (itemPrice * exchangeRate.rate).toFixed(2);
+                // NON-INDIA
+                const marginPercentage = variant.margin / 100;
+                if (currency !== "INR") {
+                    itemPrice = variant.salePrice !== 0 ? ((variant.salePrice + (variant.salePrice * marginPercentage)) * exchangeRate.rate).toFixed(2) : ((variant.price + (variant.price * marginPercentage)) * exchangeRate.rate).toFixed(2);
+                } else {
+                    itemPrice = variant.salePrice !== 0 ? ((variant.salePrice + (variant.salePrice * marginPercentage))).toFixed(2) : ((variant.price + (variant.price * marginPercentage))).toFixed(2);
+                }
             }
 
             return total + (itemPrice * item.quantity);
