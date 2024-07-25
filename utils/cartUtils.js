@@ -35,8 +35,8 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
             const { variantDetail, quantity, productID } = item;
             let itemPrice = variantDetail.salePrice || variantDetail.price;
 
-            // Check if the product requires a prescription
-            if (productID.requiresPrescription) {
+            // Ensure productID and its properties are defined
+            if (productID && productID.requiresPrescription) {
                 requiresPrescription = true;
             }
 
