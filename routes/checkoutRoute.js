@@ -12,7 +12,7 @@ const { calculateTotalCartPrice } = require('../utils/cartUtils');
 const Order = require('../models/orderModel');
 const User = require('../models/userModel');
 const verifyToken = require('../middlewares/auth');
-console.log(process.env.RAZORPAY_KEY_ID, process.env.RAZORPAY_KEY_SECRET)
+console.log(process.env.RAZORPAY_KEY_ID, process.env.RAZORPAY_KEY_SECRET, process.env.PORT)
 // Initialize Razorpay instance
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID,
