@@ -551,21 +551,21 @@ router.get('/', verifyToken, async (req, res) => {
 
         // Calculate the total price of the cart
         let totalPrice = cart.cartDetails.reduce((total, item) => {
-            console.log(item);
+            // console.log(item);
             let itemPrice;
             if (country === "INDIA") {
                 if (currency !== "INR") {
-                    itemPrice = variantDetail.salePrice !== 0 ? (variantDetail.salePrice * exchangeRate.rate).toFixed(2) : (variantDetail.price * exchangeRate.rate).toFixed(2);
+                    itemPrice = item.variantDetail.salePrice !== 0 ? (item.variantDetail.salePrice * exchangeRate.rate).toFixed(2) : (item.variantDetail.price * exchangeRate.rate).toFixed(2);
                 } else {
-                    itemPrice = variantDetail.salePrice !== 0 ? variantDetail.salePrice.toFixed(2) : variantDetail.price.toFixed(2);
+                    itemPrice = item.variantDetail.salePrice !== 0 ? item.variantDetail.salePrice.toFixed(2) : item.variantDetail.price.toFixed(2);
                 }
             } else {
                 // NON-INDIA
-                const marginPercentage = variantDetail.margin / 100;
+                const marginPercentage = item.variantDetail.margin / 100;
                 if (currency !== "INR") {
-                    itemPrice = variantDetail.salePrice !== 0 ? ((variantDetail.salePrice + (variantDetail.salePrice * marginPercentage)) * exchangeRate.rate).toFixed(2) : ((variantDetail.price + (variantDetail.price * marginPercentage)) * exchangeRate.rate).toFixed(2);
+                    itemPrice = item.variantDetail.salePrice !== 0 ? ((item.variantDetail.salePrice + (item.variantDetail.salePrice * marginPercentage)) * exchangeRate.rate).toFixed(2) : ((item.variantDetail.price + (item.variantDetail.price * marginPercentage)) * exchangeRate.rate).toFixed(2);
                 } else {
-                    itemPrice = variantDetail.salePrice !== 0 ? ((variantDetail.salePrice + (variantDetail.salePrice * marginPercentage))).toFixed(2) : ((variantDetail.price + (variantDetail.price * marginPercentage))).toFixed(2);
+                    itemPrice = item.variantDetail.salePrice !== 0 ? ((item.variantDetail.salePrice + (item.variantDetail.salePrice * marginPercentage))).toFixed(2) : ((item.variantDetail.price + (item.variantDetail.price * marginPercentage))).toFixed(2);
                 }
             }
 
