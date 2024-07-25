@@ -432,6 +432,7 @@ categoryRoute.get('/hierarchy', async (req, res) => {
     }
 });
 
+// GET category hierarchy names and IDs with optional search
 categoryRoute.get('/hierarchy-names', async (req, res) => {
     try {
         const { data, search } = req.query;
@@ -441,7 +442,7 @@ categoryRoute.get('/hierarchy-names', async (req, res) => {
 
         // Check if the search value is a valid MongoDB ObjectId
         if (search && mongoose.Types.ObjectId.isValid(search)) {
-            searchQuery = { _id: mongoose.Types.ObjectId(search) };
+            searchQuery = { _id: new mongoose.Types.ObjectId(search) };
         } else if (search) {
             searchQuery = { name: { $regex: search, $options: 'i' } };
         }
@@ -502,7 +503,6 @@ categoryRoute.get('/hierarchy-names', async (req, res) => {
         return res.status(500).send({ msg: 'Internal server error, try again later' });
     }
 });
-
 
 // Get Category by its id (currency added)
 categoryRoute.get('/:id', async (req, res) => {
