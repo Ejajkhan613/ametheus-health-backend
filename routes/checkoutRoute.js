@@ -102,7 +102,7 @@ router.post('/create-order',
             const userID = req.userDetail._id;
 
             // Fetch cart details for the user
-            const cartDetails = await calculateTotalCartPrice(userID, country="INDIA", currency="INR");
+            let cartDetails = await calculateTotalCartPrice(userID, country="INDIA", currency="INR");
             if (!cartDetails) {
                 return res.status(400).send('Unable to calculate cart details');
             }
