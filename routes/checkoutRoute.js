@@ -131,6 +131,7 @@ router.post('/create-order',
             let passportURL = '';
 
             console.log(req.file);
+            console.log(requiresPrescription);
             // Check if prescription image is required and handle file upload
             if (requiresPrescription && !req.files['prescriptionImage']) {
                 return res.status(400).send('Prescription image is required for some products in your cart.');
