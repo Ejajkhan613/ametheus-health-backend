@@ -12,11 +12,11 @@ const { calculateTotalCartPrice } = require('../utils/cartUtils');
 const Order = require('../models/orderModel');
 const User = require('../models/userModel');
 const verifyToken = require('../middlewares/auth');
-console.log(process.env.RAZORPAY_KEY_ID, process.env.RAZORPAY_KEY_SECRET, process.env.PORT)
+console.log(process.env.RAZORPAY_KEY_ID_AH, process.env.RAZORPAY_KEY_SECRET_AH, process.env.PORT)
 // Initialize Razorpay instance
 const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET,
+    key_id: process.env.RAZORPAY_KEY_ID_AH,
+    key_secret: process.env.RAZORPAY_KEY_SECRET_AH,
 });
 
 // Configure multer for file uploads
@@ -70,7 +70,7 @@ const uploadFile = async (file) => {
 
 // Verify payment signature
 const verifyPayment = (orderId, paymentId, signature) => {
-    const generatedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+    const generatedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET_AH)
         .update(`${orderId}|${paymentId}`)
         .digest('hex');
     return generatedSignature === signature;
@@ -190,7 +190,7 @@ router.post('/create-order',
                 orderId: order.id,
                 currency,
                 amount: totalPrice,
-                key_id: process.env.RAZORPAY_KEY_ID
+                key_id: process.env.RAZORPAY_KEY_ID_AH
             });
         } catch (error) {
             console.error('Error creating order:', error);
