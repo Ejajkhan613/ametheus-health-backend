@@ -634,7 +634,6 @@ router.get('/', verifyToken, async (req, res) => {
                     price: convertedPrice,
                     salePrice: convertedSalePrice,
                     currency: exchangeRate.currency === 'AED' ? exchangeRate.currency : exchangeRate.symbol,
-                    currencyCode: exchangeRate.currency
                 }
             };
         });
@@ -650,7 +649,8 @@ router.get('/', verifyToken, async (req, res) => {
                 totalPrice: totalPrice.toString(),
                 deliveryCharge: deliveryChargeInCurrency.toString(),
                 totalCartPrice: totalCartPrice.toString(),
-                currency: exchangeRate.symbol
+                currency: exchangeRate.symbol,
+                currencyCode: exchangeRate.currency
             }
         });
 
