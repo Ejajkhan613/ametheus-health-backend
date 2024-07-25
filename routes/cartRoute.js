@@ -650,7 +650,8 @@ router.get('/', verifyToken, async (req, res) => {
                 deliveryCharge: deliveryChargeInCurrency.toString(),
                 totalCartPrice: totalCartPrice.toString(),
                 currency: exchangeRate.symbol,
-                currencyCode: exchangeRate.currency
+                currencyCode: exchangeRate.currency,
+                country
             }
         });
 
