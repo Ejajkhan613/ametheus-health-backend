@@ -21,6 +21,15 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
         let requiresPrescription = false;
         const products = [];
 
+        // Fetch exchange rate for the selected currency if it's not INR
+        let exchangeRate = { rate: 1, symbol: '₹' }; // Default for INR
+        if (currency !== 'INR') {
+            exchangeRate = await ExchangeRate.findOne({ currency }).exec();
+            if (!exchangeRate) {
+                throw new Error('Exchange rate not found for the selected currency');
+            }
+        }
+
         // Calculate total price and delivery charge based on country and currency
         for (const item of cart.cartDetails) {
             const { variantDetail, quantity, productID } = item;
@@ -32,8 +41,12 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
             }
 
             if (country !== 'India') {
-                const margin = variantDetail.margin || 0;
-                itemPrice += (itemPrice * margin / 100);
+                const marginPercentage = variantDetail.margin || 0;
+                itemPrice += (itemPrice * marginPercentage / 100);
+            }
+
+            if (currency !== 'INR') {
+                itemPrice = (itemPrice * exchangeRate.rate).toFixed(2);
             }
 
             totalCartPrice += itemPrice * quantity;
@@ -45,21 +58,42 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
             });
         }
 
-        // Fetch delivery charge if applicable
-        deliveryCharge = await getDeliveryCharge(country);
-
-        // Convert totalCartPrice to selected currency if needed
-        if (currency !== 'INR') {
-            const exchangeRate = await ExchangeRate.findOne({ currency }).exec();
-            if (!exchangeRate) {
-                throw new Error('Exchange rate not found');
+        // Determine delivery charge based on country
+        if (country === 'India') {
+            if (totalCartPrice > 0 && totalCartPrice < 500) {
+                deliveryCharge = 99;
+            } else if (totalCartPrice >= 500 && totalCartPrice < 1000) {
+                deliveryCharge = 59;
+            } else if (totalCartPrice >= 1000) {
+                deliveryCharge = 0;
             }
-            totalPrice = (totalCartPrice + deliveryCharge) * exchangeRate.rate;
         } else {
-            totalPrice = totalCartPrice + deliveryCharge;
+            if (totalCartPrice > 0 && totalCartPrice < 4177.78) {
+                deliveryCharge = 4178.62;
+            } else if (totalCartPrice >= 4177.78 && totalCartPrice < 16713.64) {
+                deliveryCharge = 3342.90;
+            } else if (totalCartPrice >= 16713.65) {
+                deliveryCharge = 0;
+            }
         }
 
-        return { requiresPrescription, products, totalCartPrice, deliveryCharge, totalPrice };
+        // Convert delivery charge to the selected currency
+        let deliveryChargeInCurrency = deliveryCharge;
+        if (currency !== 'INR') {
+            deliveryChargeInCurrency = (deliveryCharge * exchangeRate.rate).toFixed(2);
+        }
+
+        // Calculate total cart price
+        totalPrice = (parseFloat(totalCartPrice) + parseFloat(deliveryChargeInCurrency)).toFixed(2);
+
+        // Return the results
+        return {
+            requiresPrescription,
+            products,
+            totalCartPrice: totalCartPrice.toFixed(2),
+            deliveryCharge: deliveryChargeInCurrency.toFixed(2),
+            totalPrice
+        };
     } catch (error) {
         console.error(error);
         throw new Error('Error calculating cart price');
