@@ -103,7 +103,7 @@ router.post('/create-order',
         body('age').isInt({ min: 0 }).notEmpty(),
         body('bloodPressure').isString().optional(),
         body('weight').isFloat().optional(),
-        body('weightUnit').isIn(['KG', 'IB']).optional(),
+        body('weightUnit').isIn(['KG', 'LB']).optional(),
         body('orderNotes').isString().optional(),
         body('currency').isIn(['INR', 'USD', 'EUR', 'GBP', 'AED', 'RUB']).notEmpty()
     ],
