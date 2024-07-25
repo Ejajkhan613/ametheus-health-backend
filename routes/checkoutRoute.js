@@ -86,22 +86,7 @@ const createOrder = async (totalCartPrice, currency) => {
     });
 };
 
-router.post('/create-order',
-    [
-        body('name').isString().notEmpty().withMessage('Name is required'),
-        body('companyName').isString().optional(),
-        body('country').isString().notEmpty().withMessage('Country is required'),
-        body('streetAddress').isString().notEmpty().withMessage('Street address is required'),
-        body('city').isString().notEmpty().withMessage('City is required'),
-        body('state').isString().notEmpty().withMessage('State is required'),
-        body('pincode').isString().notEmpty().withMessage('Pincode is required'),
-        body('mobile').isString().notEmpty().withMessage('Mobile number is required'),
-        body('email').isEmail().withMessage('Valid email is required'),
-        body('age').isInt({ min: 0 }).withMessage('Age must be a positive integer'),
-        body('bloodPressure').isString().optional(),
-        body('orderNotes').isString().optional(),
-        body('currency').isIn(['INR', 'USD', 'EUR', 'GBP', 'AED', 'RUB']).withMessage('Invalid currency')
-    ],
+router.post('/create-order', 
     verifyToken,
     async (req, res) => {
         // Validation results
@@ -109,6 +94,7 @@ router.post('/create-order',
         if (!errors.isEmpty()) {
             return res.status(400).json({ errors: errors.array() });
         }
+        console.log(req.body);
 
         try {
             // Extract data from request body
