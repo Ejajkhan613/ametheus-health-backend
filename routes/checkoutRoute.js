@@ -101,13 +101,11 @@ router.post('/create-order',
         body('email').isEmail().notEmpty(),
         body('age').isInt({ min: 0 }).notEmpty(),
         body('bloodPressure').isString().optional(),
-        body('weight').isFloat().optional(),
-        body('weightUnit').isIn(['KG', 'IB']).optional(),
         body('orderNotes').isString().optional(),
         body('currency').isIn(['INR', 'USD', 'EUR', 'GBP', 'AED', 'RUB']).notEmpty()
     ],
     async (req, res) => {
-        console.log(req.body);
+        console.log(req.body)
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({ errors: errors.array() });
