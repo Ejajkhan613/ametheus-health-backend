@@ -130,17 +130,17 @@ router.post('/create-order',
             let prescriptionURL = '';
             let passportURL = '';
 
-            if (requiresPrescription && !req.files['prescriptionImage']) {
-                return res.status(400).send('Prescription image is required for some products in your cart.');
-            }
+            // if (requiresPrescription && !req.files['prescriptionImage']) {
+            //     return res.status(400).send('Prescription image is required for some products in your cart.');
+            // }
 
-            if (req.files['prescriptionImage']) {
-                prescriptionURL = await uploadFile(req.files['prescriptionImage'][0]);
-            }
+            // if (req.files['prescriptionImage']) {
+            //     prescriptionURL = await uploadFile(req.files['prescriptionImage'][0]);
+            // }
 
-            if (req.files['passportImage']) {
-                passportURL = await uploadFile(req.files['passportImage'][0]);
-            }
+            // if (req.files['passportImage']) {
+            //     passportURL = await uploadFile(req.files['passportImage'][0]);
+            // }
 
             // Create Razorpay order
             const order = await createOrder(totalPrice, currency);
