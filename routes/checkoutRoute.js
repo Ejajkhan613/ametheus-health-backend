@@ -144,7 +144,7 @@ router.post('/create-order',
 
             // Create Razorpay order
             const order = await createOrder(totalPrice, currency);
-            console.log(order);
+            console.log(order.id);
 
             // Save the order details in the database
             const newOrder = new Order({
@@ -168,7 +168,7 @@ router.post('/create-order',
                 deliveryCharge,
                 totalPrice,
                 status: "Pending", // Set status to Pending initially
-                paymentGateway: {
+                payment: {
                     orderId: order.id // Save Razorpay order ID
                 },
                 userID,
@@ -215,10 +215,10 @@ router.post('/payment-callback',
             }
 
             // Update order status
-            const order = await Order.findOne({ 'paymentGateway.orderId': order_id });
+            const order = await Order.findOne({ 'payment.orderId': order_id });
             if (order) {
-                order.paymentGateway.paymentId = payment_id;
-                order.paymentGateway.signature = signature;
+                order.payment.paymentId = payment_id;
+                order.payment.signature = signature;
                 order.status = 'Completed';
                 await order.save();
             }
