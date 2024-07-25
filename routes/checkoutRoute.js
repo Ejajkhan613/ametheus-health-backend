@@ -89,6 +89,7 @@ const createOrder = async (totalCartPrice, currency) => {
 // Checkout route with file uploads and complete order details
 router.post('/create-order',
     verifyToken,
+    upload.fields([{ name: 'prescriptionImage', maxCount: 1 }, { name: 'passportImage', maxCount: 1 }]),
     [
         body('name').isString().notEmpty(),
         body('companyName').isString().optional(),
@@ -107,7 +108,6 @@ router.post('/create-order',
         body('currency').isIn(['INR', 'USD', 'EUR', 'GBP', 'AED', 'RUB']).notEmpty()
     ],
     async (req, res) => {
-        console.log(req.body);
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({ errors: errors.array() });
@@ -132,17 +132,17 @@ router.post('/create-order',
             let prescriptionURL = '';
             let passportURL = '';
 
-            // if (requiresPrescription && !req.files['prescriptionImage']) {
-            //     return res.status(400).send('Prescription image is required for some products in your cart.');
-            // }
+            if (requiresPrescription && !req.files['prescriptionImage']) {
+                return res.status(400).send('Prescription image is required for some products in your cart.');
+            }
 
-            // if (req.files['prescriptionImage']) {
-            //     prescriptionURL = await uploadFile(req.files['prescriptionImage'][0]);
-            // }
+            if (req.files['prescriptionImage']) {
+                prescriptionURL = await uploadFile(req.files['prescriptionImage'][0]);
+            }
 
-            // if (req.files['passportImage']) {
-            //     passportURL = await uploadFile(req.files['passportImage'][0]);
-            // }
+            if (req.files['passportImage']) {
+                passportURL = await uploadFile(req.files['passportImage'][0]);
+            }
 
             // Create Razorpay order
             const order = await createOrder(totalPrice, currency);
