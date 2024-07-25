@@ -137,12 +137,59 @@ router.post('/create-order',
                 return res.status(400).send('Prescription image is required for some products in your cart.');
             }
             if (req.files['prescriptionImage']) {
-                prescriptionURL = await uploadFile(req.files['prescriptionImage'][0]);
+                // Ensure that prescriptionImage is an array and has at least one file
+                if (Array.isArray(req.files['prescriptionImage']) && req.files['prescriptionImage'].length > 0) {
+                    const file = req.files['prescriptionImage'][0];
+
+                    // Validate file type (e.g., ensure it's an image)
+                    if (!file.mimetype.startsWith('image/')) {
+                        return res.status(400).send('Prescription image must be an image file.');
+                    }
+
+                    // Optional: Validate file size (e.g., max 10 MB)
+                    const maxFileSize = 10 * 1024 * 1024; // 10 MB
+                    if (file.size > maxFileSize) {
+                        return res.status(400).send('Prescription image size exceeds the 5 MB limit.');
+                    }
+
+                    try {
+                        prescriptionURL = await uploadFile(file);
+                    } catch (uploadError) {
+                        console.error('Error uploading prescription image:', uploadError);
+                        return res.status(500).send('Error uploading prescription image.');
+                    }
+                } else {
+                    return res.status(400).send('Prescription image file is required.');
+                }
             }
 
             if (req.files['passportImage']) {
-                passportURL = await uploadFile(req.files['passportImage'][0]);
+                // Ensure that passportImage is an array and has at least one file
+                if (Array.isArray(req.files['passportImage']) && req.files['passportImage'].length > 0) {
+                    const file = req.files['passportImage'][0];
+
+                    // Validate file type (e.g., ensure it's an image)
+                    if (!file.mimetype.startsWith('image/')) {
+                        return res.status(400).send('Passport image must be an image file.');
+                    }
+
+                    // Optional: Validate file size (e.g., max 10 MB)
+                    const maxFileSize = 10 * 1024 * 1024; // 10 MB
+                    if (file.size > maxFileSize) {
+                        return res.status(400).send('Passport image size exceeds the 5 MB limit.');
+                    }
+
+                    try {
+                        passportURL = await uploadFile(file);
+                    } catch (uploadError) {
+                        console.error('Error uploading passport image:', uploadError);
+                        return res.status(500).send('Error uploading passport image.');
+                    }
+                } else {
+                    return res.status(400).send('Passport image file is required.');
+                }
             }
+
 
             // Create Razorpay order
             const razorpayOrder = await createOrder(totalPrice, currency);
