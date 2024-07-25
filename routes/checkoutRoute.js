@@ -86,7 +86,6 @@ const createOrder = async (totalCartPrice, currency) => {
     });
 };
 
-// Checkout route with file uploads and complete order details
 router.post('/create-order',
     verifyToken,
     upload.fields([{ name: 'prescriptionImage', maxCount: 1 }, { name: 'passportImage', maxCount: 1 }]),
@@ -119,6 +118,9 @@ router.post('/create-order',
 
             const userID = req.userDetail._id;
 
+            // Log the req.files object for debugging
+            console.log('Uploaded files:', req.files);
+
             // Fetch cart details for the user
             const cartDetails = await calculateTotalCartPrice(userID, country, currency);
             if (!cartDetails) {
@@ -130,26 +132,22 @@ router.post('/create-order',
             let prescriptionURL = '';
             let passportURL = '';
 
-            console.log(req.file);
-            console.log(requiresPrescription);
             // Check if prescription image is required and handle file upload
-            if (requiresPrescription && !req.files['prescriptionImage']) {
-                return res.status(400).send('Prescription image is required for some products in your cart.');
-            }
-            if (req.files['prescriptionImage']) {
-                // Ensure that prescriptionImage is an array and has at least one file
-                if (Array.isArray(req.files['prescriptionImage']) && req.files['prescriptionImage'].length > 0) {
-                    const file = req.files['prescriptionImage'][0];
+            if (requiresPrescription) {
+                if (!req.files['prescriptionImage'] || req.files['prescriptionImage'].length === 0) {
+                    return res.status(400).send('Prescription image is required for some products in your cart.');
+                }
 
-                    // Validate file type (e.g., ensure it's an image)
+                // Handle prescription image upload
+                const file = req.files['prescriptionImage'][0];
+                if (file) {
                     if (!file.mimetype.startsWith('image/')) {
                         return res.status(400).send('Prescription image must be an image file.');
                     }
 
-                    // Optional: Validate file size (e.g., max 10 MB)
                     const maxFileSize = 10 * 1024 * 1024; // 10 MB
                     if (file.size > maxFileSize) {
-                        return res.status(400).send('Prescription image size exceeds the 5 MB limit.');
+                        return res.status(400).send('Prescription image size exceeds the 10 MB limit.');
                     }
 
                     try {
@@ -158,38 +156,33 @@ router.post('/create-order',
                         console.error('Error uploading prescription image:', uploadError);
                         return res.status(500).send('Error uploading prescription image.');
                     }
-                } else {
-                    return res.status(400).send('Prescription image file is required.');
                 }
             }
 
             if (req.files['passportImage']) {
-                // Ensure that passportImage is an array and has at least one file
-                if (Array.isArray(req.files['passportImage']) && req.files['passportImage'].length > 0) {
+                if (req.files['passportImage'].length > 0) {
                     const file = req.files['passportImage'][0];
+                    if (file) {
+                        if (!file.mimetype.startsWith('image/')) {
+                            return res.status(400).send('Passport image must be an image file.');
+                        }
 
-                    // Validate file type (e.g., ensure it's an image)
-                    if (!file.mimetype.startsWith('image/')) {
-                        return res.status(400).send('Passport image must be an image file.');
-                    }
+                        const maxFileSize = 10 * 1024 * 1024; // 10 MB
+                        if (file.size > maxFileSize) {
+                            return res.status(400).send('Passport image size exceeds the 10 MB limit.');
+                        }
 
-                    // Optional: Validate file size (e.g., max 10 MB)
-                    const maxFileSize = 10 * 1024 * 1024; // 10 MB
-                    if (file.size > maxFileSize) {
-                        return res.status(400).send('Passport image size exceeds the 5 MB limit.');
-                    }
-
-                    try {
-                        passportURL = await uploadFile(file);
-                    } catch (uploadError) {
-                        console.error('Error uploading passport image:', uploadError);
-                        return res.status(500).send('Error uploading passport image.');
+                        try {
+                            passportURL = await uploadFile(file);
+                        } catch (uploadError) {
+                            console.error('Error uploading passport image:', uploadError);
+                            return res.status(500).send('Error uploading passport image.');
+                        }
                     }
                 } else {
                     return res.status(400).send('Passport image file is required.');
                 }
             }
-
 
             // Create Razorpay order
             const razorpayOrder = await createOrder(totalPrice, currency);
@@ -215,9 +208,9 @@ router.post('/create-order',
                 totalCartPrice,
                 deliveryCharge,
                 totalPrice,
-                status: "Pending", // Set status to Pending initially
+                status: "Pending",
                 paymentGateway: {
-                    orderId: razorpayOrder.id // Save Razorpay order ID
+                    orderId: razorpayOrder.id
                 },
                 userID,
                 prescriptionURL,
@@ -232,7 +225,7 @@ router.post('/create-order',
                 orderId: razorpayOrder.id,
                 currency,
                 amount: totalPrice,
-                key_id: process.env.RZPY_KEY_ID_AH // Razorpay key ID
+                key_id: process.env.RZPY_KEY_ID_AH
             });
         } catch (error) {
             console.error('Error creating order:', error);
@@ -240,6 +233,7 @@ router.post('/create-order',
         }
     }
 );
+
 
 
 
