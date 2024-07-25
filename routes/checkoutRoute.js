@@ -102,8 +102,6 @@ router.post('/create-order',
         body('email').isEmail().notEmpty(),
         body('age').isInt({ min: 0 }).notEmpty(),
         body('bloodPressure').isString().optional(),
-        body('weight').isFloat().optional(),
-        body('weightUnit').isIn(['KG', 'LB']).optional(),
         body('orderNotes').isString().optional(),
         body('currency').isIn(['INR', 'USD', 'EUR', 'GBP', 'AED', 'RUB']).notEmpty()
     ],
@@ -115,7 +113,7 @@ router.post('/create-order',
 
         try {
             const {
-                name, companyName, country, streetAddress, city, state, pincode, mobile, email, age, bloodPressure, weight, weightUnit,
+                name, companyName, country, streetAddress, city, state, pincode, mobile, email, age, bloodPressure, weight = "", weightUnit = "KG",
                 orderNotes, currency
             } = req.body;
 
