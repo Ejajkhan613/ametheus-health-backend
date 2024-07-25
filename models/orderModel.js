@@ -49,20 +49,20 @@ const orderSchema = new mongoose.Schema({
   },
   bloodPressure: {
     type: String,
-    default: null,
+    default: 0,
   },
   weight: {
     type: Number,
-    default: null,
+    default: 0,
   },
   weightUnit: {
     type: String,
     enum: ['KG', 'IB'],
-    default: KG,
+    default: "KG",
   },
   prescriptionURL: {
     type: String,
-    default: null,
+    default: "",
   },
   passportURL: {
     type: String,
