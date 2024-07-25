@@ -89,27 +89,26 @@ const createOrder = async (totalCartPrice, currency) => {
 router.post('/create-order',
     verifyToken,
     upload.fields([{ name: 'prescriptionImage', maxCount: 1 }, { name: 'passportImage', maxCount: 1 }]),
-    [
-        body('name').isString().notEmpty().withMessage('Name is required'),
-        body('companyName').isString().optional(),
-        body('country').isString().notEmpty().withMessage('Country is required'),
-        body('streetAddress').isString().notEmpty().withMessage('Street address is required'),
-        body('city').isString().notEmpty().withMessage('City is required'),
-        body('state').isString().notEmpty().withMessage('State is required'),
-        body('pincode').isString().notEmpty().withMessage('Pincode is required'),
-        body('mobile').isString().notEmpty().withMessage('Mobile number is required'),
-        body('email').isEmail().notEmpty().withMessage('Valid email is required'),
-        body('age').isInt({ min: 0 }).notEmpty().withMessage('Age is required and must be a positive integer'),
-        body('bloodPressure').isString().optional(),
-        body('orderNotes').isString().optional(),
-        body('currency').isIn(['INR', 'USD', 'EUR', 'GBP', 'AED', 'RUB']).withMessage('Invalid currency')
-    ],
     async (req, res) => {
+        console.log('Request fields:', req.body); // Log request body
+        console.log('Uploaded files:', req.files); // Log uploaded files
+
+        // Check for unexpected fields in request files
+        if (req.files) {
+            Object.keys(req.files).forEach(fieldName => {
+                if (!['prescriptionImage', 'passportImage'].includes(fieldName)) {
+                    return res.status(400).send(`Unexpected field: ${fieldName}`);
+                }
+            });
+        }
+
+        // Existing validation code
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({ errors: errors.array() });
         }
 
+        // Extract form data and process files
         try {
             const {
                 name, companyName, country, streetAddress, city, state, pincode, mobile, email, age, bloodPressure,
@@ -117,8 +116,6 @@ router.post('/create-order',
             } = req.body;
 
             const userID = req.userDetail._id;
-
-            console.log('Uploaded files:', req.files); // Debugging statement
 
             // Fetch cart details for the user
             const cartDetails = await calculateTotalCartPrice(userID, country, currency);
@@ -231,6 +228,7 @@ router.post('/create-order',
         }
     }
 );
+
 
 
 
