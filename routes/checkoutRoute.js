@@ -117,6 +117,7 @@ router.post('/create-order',
                 name, companyName, country, streetAddress, city, state, pincode, mobile, email, age, bloodPressure, weight, weightUnit,
                 orderNotes, currency
             } = req.body;
+            console.log(req.body);
 
             const userID = req.userDetail._id;
 
