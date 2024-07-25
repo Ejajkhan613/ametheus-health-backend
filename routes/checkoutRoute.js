@@ -144,6 +144,7 @@ router.post('/create-order',
 
             // Create Razorpay order
             const order = await createOrder(totalPrice, currency);
+            console.log(order);
 
             // Save the order details in the database
             const newOrder = new Order({
