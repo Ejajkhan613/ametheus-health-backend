@@ -89,7 +89,6 @@ const createOrder = async (totalCartPrice, currency) => {
 // Checkout route with file uploads and complete order details
 router.post('/create-order',
     verifyToken,
-    upload.fields([{ name: 'prescriptionImage', maxCount: 1 }, { name: 'passportImage', maxCount: 1 }]),
     [
         body('name').isString().notEmpty(),
         body('companyName').isString().optional(),
