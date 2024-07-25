@@ -86,23 +86,23 @@ const createOrder = async (totalCartPrice, currency) => {
     });
 };
 
-router.post('/create-order', 
+router.post('/create-order',
     verifyToken,
     async (req, res) => {
-        
+
         console.log(req.body);
 
         try {
             // Extract data from request body
             const {
-                name, companyName, country, streetAddress, city, state, pincode, mobile, email, age, bloodPressure,
-                weight = "", weightUnit = "KG", orderNotes, currency
+                name, companyName, country = "INDIA", streetAddress, city, state, pincode, mobile, email, age, bloodPressure,
+                weight = "", weightUnit = "KG", orderNotes, currency = "INR"
             } = req.body;
 
             const userID = req.userDetail._id;
 
             // Fetch cart details for the user
-            let cartDetails = await calculateTotalCartPrice(userID, country="INDIA", currency="INR");
+            const cartDetails = await calculateTotalCartPrice(userID, country, currency);
             if (!cartDetails) {
                 return res.status(400).send('Unable to calculate cart details');
             }
