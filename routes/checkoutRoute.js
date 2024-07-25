@@ -128,6 +128,7 @@ router.post('/create-order',
             let prescriptionURL = '';
             let passportURL = '';
 
+            console.log(req.files);
             // Check if prescription image is required and handle file upload
             if (requiresPrescription) {
                 if (!req.files || !req.files['prescriptionImage'] || req.files['prescriptionImage'].length === 0) {
