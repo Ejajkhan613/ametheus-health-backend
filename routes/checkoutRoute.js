@@ -4,8 +4,10 @@ const router = express.Router();
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
-const Busboy = require('busboy');
+const multer = require('multer');
+const { body, validationResult } = require('express-validator');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+
 const { calculateTotalCartPrice } = require('../utils/cartUtils');
 const Order = require('../models/orderModel');
 const User = require('../models/userModel');
@@ -17,6 +19,9 @@ const razorpay = new Razorpay({
     key_secret: process.env.RZPY_KEY_SECRET_AH,
 });
 
+// Configure multer for file uploads
+const upload = multer({ storage: multer.memoryStorage() });
+
 // Configure AWS S3 for file uploads
 const s3 = new S3Client({
     region: process.env.AWS_REGION,
@@ -27,7 +32,7 @@ const s3 = new S3Client({
 });
 
 // Handle file uploads to S3
-const uploadFile = async (file, fileName) => {
+const uploadFile = async (file) => {
     if (!file) {
         throw new Error('No file provided');
     }
@@ -47,7 +52,7 @@ const uploadFile = async (file, fileName) => {
     const fileContent = Buffer.from(file.buffer, 'binary');
     const params = {
         Bucket: process.env.AWS_BUCKET_NAME,
-        Key: `orderuploads/${Date.now()}_${fileName}`,
+        Key: `orderuploads/${Date.now()}_${file.originalname}`,
         Body: fileContent,
         ContentType: file.mimetype,
         ACL: 'public-read',
@@ -81,38 +86,17 @@ const createOrder = async (totalCartPrice, currency) => {
     });
 };
 
-router.post('/create-order', verifyToken, (req, res) => {
-    const busboy = new Busboy({ headers: req.headers });
+router.post('/create-order',
+    verifyToken,
+    async (req, res) => {
 
-    let prescriptionURL = '';
-    let passportURL = '';
+        // Existing validation code
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
 
-    busboy.on('file', async (fieldname, file, filename, encoding, mimetype) => {
-        const fileBuffer = [];
-        file.on('data', (data) => {
-            fileBuffer.push(data);
-        });
-        file.on('end', async () => {
-            const buffer = Buffer.concat(fileBuffer);
-            if (fieldname === 'prescriptionImage') {
-                try {
-                    prescriptionURL = await uploadFile({ buffer, mimetype, size: buffer.length }, filename);
-                } catch (uploadError) {
-                    console.error('Error uploading prescription image:', uploadError);
-                    res.status(500).send('Error uploading prescription image.');
-                }
-            } else if (fieldname === 'passportImage') {
-                try {
-                    passportURL = await uploadFile({ buffer, mimetype, size: buffer.length }, filename);
-                } catch (uploadError) {
-                    console.error('Error uploading passport image:', uploadError);
-                    res.status(500).send('Error uploading passport image.');
-                }
-            }
-        });
-    });
-
-    busboy.on('finish', async () => {
+        // Extract form data and process files
         try {
             const {
                 name, companyName, country, streetAddress, city, state, pincode, mobile, email, age, bloodPressure,
@@ -129,13 +113,60 @@ router.post('/create-order', verifyToken, (req, res) => {
 
             const { requiresPrescription, products, totalCartPrice, deliveryCharge, totalPrice } = cartDetails;
 
-            if (requiresPrescription && !prescriptionURL) {
-                return res.status(400).send('Prescription image is required for some products in your cart.');
-            }
+            // let prescriptionURL = '';
+            // let passportURL = '';
 
-            if (!passportURL) {
-                return res.status(400).send('Passport image file is required.');
-            }
+            console.log(req.files);
+            // Check if prescription image is required and handle file upload
+            // if (requiresPrescription) {
+            //     if (!req.files || !req.files['prescriptionImage'] || req.files['prescriptionImage'].length === 0) {
+            //         return res.status(400).send('Prescription image is required for some products in your cart.');
+            //     }
+
+            //     const file = req.files['prescriptionImage'][0];
+            //     if (file) {
+            //         if (!file.mimetype.startsWith('image/')) {
+            //             return res.status(400).send('Prescription image must be an image file.');
+            //         }
+
+            //         const maxFileSize = 10 * 1024 * 1024; // 10 MB
+            //         if (file.size > maxFileSize) {
+            //             return res.status(400).send('Prescription image size exceeds the 10 MB limit.');
+            //         }
+
+            //         try {
+            //             prescriptionURL = await uploadFile(file);
+            //         } catch (uploadError) {
+            //             console.error('Error uploading prescription image:', uploadError);
+            //             return res.status(500).send('Error uploading prescription image.');
+            //         }
+            //     }
+            // }
+
+            // if (req.files && req.files['passportImage']) {
+            //     if (req.files['passportImage'].length > 0) {
+            //         const file = req.files['passportImage'][0];
+            //         if (file) {
+            //             if (!file.mimetype.startsWith('image/')) {
+            //                 return res.status(400).send('Passport image must be an image file.');
+            //             }
+
+            //             const maxFileSize = 10 * 1024 * 1024; // 10 MB
+            //             if (file.size > maxFileSize) {
+            //                 return res.status(400).send('Passport image size exceeds the 10 MB limit.');
+            //             }
+
+            //             try {
+            //                 passportURL = await uploadFile(file);
+            //             } catch (uploadError) {
+            //                 console.error('Error uploading passport image:', uploadError);
+            //                 return res.status(500).send('Error uploading passport image.');
+            //             }
+            //         }
+            //     } else {
+            //         return res.status(400).send('Passport image file is required.');
+            //     }
+            // }
 
             // Create Razorpay order
             const razorpayOrder = await createOrder(totalPrice, currency);
@@ -184,10 +215,8 @@ router.post('/create-order', verifyToken, (req, res) => {
             console.error('Error creating order:', error);
             res.status(500).send('Internal Server Error');
         }
-    });
-
-    req.pipe(busboy);
-});
+    }
+);
 
 
 

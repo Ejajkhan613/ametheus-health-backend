@@ -60,14 +60,6 @@ const orderSchema = new mongoose.Schema({
     enum: ['KG', 'LB'],
     default: "KG",
   },
-  prescriptionURL: {
-    type: String,
-    default: "",
-  },
-  passportURL: {
-    type: String,
-    required: true,
-  },
   orderNotes: {
     type: String,
     default: null,
