@@ -12,15 +12,11 @@ const { calculateTotalCartPrice } = require('../utils/cartUtils');
 const Order = require('../models/orderModel');
 const User = require('../models/userModel');
 const verifyToken = require('../middlewares/auth');
-console.log(process.env.RZPY_KEY_ID_AH, process.env.RZPY_KEY_SECRET_AH, process.env.PORT)
+
 // Initialize Razorpay instance
-// const razorpay = new Razorpay({
-//     key_id: process.env.RZPY_KEY_ID_AH,
-//     key_secret: process.env.RZPY_KEY_SECRET_AH,
-// });
 const razorpay = new Razorpay({
-    key_id: "grehrg",
-    key_secret: "sgher",
+    key_id: process.env.RZPY_KEY_ID_AH,
+    key_secret: process.env.RZPY_KEY_SECRET_AH,
 });
 
 // Configure multer for file uploads
