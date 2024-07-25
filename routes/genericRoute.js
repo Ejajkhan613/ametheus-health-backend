@@ -79,10 +79,23 @@ genericRoute.get('/', async (req, res) => {
     }
 });
 
-// GET all generics
+// GET all generics with optional search by name or ID
 genericRoute.get('/names', verifyToken, async (req, res) => {
     try {
-        const generics = await GenericModel.find().select('name');
+        const { search } = req.query;
+
+        // Build query object for searching by name or ID
+        let searchQuery = {};
+
+        // Check if the search value is a valid MongoDB ObjectId
+        if (search && mongoose.Types.ObjectId.isValid(search)) {
+            searchQuery = { _id: mongoose.Types.ObjectId(search) };
+        } else if (search) {
+            searchQuery = { name: { $regex: search, $options: 'i' } };
+        }
+
+        // Fetch generics, filtered by search if provided
+        const generics = await GenericModel.find(searchQuery).select('name');
 
         res.status(200).send(generics);
     } catch (error) {
@@ -90,6 +103,7 @@ genericRoute.get('/names', verifyToken, async (req, res) => {
         return res.status(500).json({ msg: 'Internal server error, try again later' });
     }
 });
+
 
 // GET a generic by ID (with all products who have the same genericID)
 genericRoute.get('/:id', async (req, res) => {
