@@ -46,7 +46,7 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
             }
 
             if (currency !== 'INR') {
-                itemPrice = (itemPrice * exchangeRate.rate).toFixed(2);
+                itemPrice = (itemPrice * exchangeRate.rate);
             }
 
             totalCartPrice += itemPrice * quantity;
@@ -80,11 +80,11 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
         // Convert delivery charge to the selected currency
         let deliveryChargeInCurrency = deliveryCharge;
         if (currency !== 'INR') {
-            deliveryChargeInCurrency = (deliveryCharge * exchangeRate.rate).toFixed(2);
+            deliveryChargeInCurrency = deliveryCharge * exchangeRate.rate;
         }
 
         // Calculate total cart price
-        totalPrice = (parseFloat(totalCartPrice) + parseFloat(deliveryChargeInCurrency)).toFixed(2);
+        totalPrice = (totalCartPrice + deliveryChargeInCurrency).toFixed(2);
 
         // Return the results
         return {
