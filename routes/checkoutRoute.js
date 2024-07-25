@@ -118,8 +118,7 @@ router.post('/create-order',
 
             const userID = req.userDetail._id;
 
-            // Log the req.files object for debugging
-            console.log('Uploaded files:', req.files);
+            console.log('Uploaded files:', req.files); // Debugging statement
 
             // Fetch cart details for the user
             const cartDetails = await calculateTotalCartPrice(userID, country, currency);
@@ -134,11 +133,10 @@ router.post('/create-order',
 
             // Check if prescription image is required and handle file upload
             if (requiresPrescription) {
-                if (!req.files['prescriptionImage'] || req.files['prescriptionImage'].length === 0) {
+                if (!req.files || !req.files['prescriptionImage'] || req.files['prescriptionImage'].length === 0) {
                     return res.status(400).send('Prescription image is required for some products in your cart.');
                 }
 
-                // Handle prescription image upload
                 const file = req.files['prescriptionImage'][0];
                 if (file) {
                     if (!file.mimetype.startsWith('image/')) {
@@ -159,7 +157,7 @@ router.post('/create-order',
                 }
             }
 
-            if (req.files['passportImage']) {
+            if (req.files && req.files['passportImage']) {
                 if (req.files['passportImage'].length > 0) {
                     const file = req.files['passportImage'][0];
                     if (file) {
@@ -233,6 +231,7 @@ router.post('/create-order',
         }
     }
 );
+
 
 
 
