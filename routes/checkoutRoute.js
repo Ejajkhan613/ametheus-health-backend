@@ -96,23 +96,22 @@ router.post('/create-order',
         body('state').isString().notEmpty().withMessage('State is required'),
         body('pincode').isString().notEmpty().withMessage('Pincode is required'),
         body('mobile').isString().notEmpty().withMessage('Mobile number is required'),
-        body('email').isEmail().notEmpty().withMessage('Valid email is required'),
-        body('age').isInt({ min: 0 }).notEmpty().withMessage('Age is required and must be a positive integer'),
+        body('email').isEmail().withMessage('Valid email is required'),
+        body('age').isInt({ min: 0 }).withMessage('Age must be a positive integer'),
         body('bloodPressure').isString().optional(),
         body('orderNotes').isString().optional(),
         body('currency').isIn(['INR', 'USD', 'EUR', 'GBP', 'AED', 'RUB']).withMessage('Invalid currency')
     ],
     verifyToken,
     async (req, res) => {
-
-        // Existing validation code
+        // Validation results
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({ errors: errors.array() });
         }
 
-        // Extract form data and process files
         try {
+            // Extract data from request body
             const {
                 name, companyName, country, streetAddress, city, state, pincode, mobile, email, age, bloodPressure,
                 weight = "", weightUnit = "KG", orderNotes, currency
