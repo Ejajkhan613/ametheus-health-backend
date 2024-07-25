@@ -86,17 +86,37 @@ const createOrder = async (totalCartPrice, currency) => {
     });
 };
 
+// Checkout route with file uploads and complete order details
 router.post('/create-order',
     verifyToken,
+    upload.fields([{ name: 'prescriptionImage', maxCount: 1 }, { name: 'passportImage', maxCount: 1 }]),
+    [
+        body('name').isString().notEmpty(),
+        body('companyName').isString().optional(),
+        body('country').isString().notEmpty(),
+        body('streetAddress').isString().notEmpty(),
+        body('city').isString().notEmpty(),
+        body('state').isString().notEmpty(),
+        body('pincode').isString().notEmpty(),
+        body('mobile').isString().notEmpty(),
+        body('email').isEmail().notEmpty(),
+        body('age').isInt({ min: 0 }).notEmpty(),
+        body('bloodPressure').isString().optional(),
+        body('weight').isFloat().optional(),
+        body('weightUnit').isIn(['KG', 'IB']).optional(),
+        body('orderNotes').isString().optional(),
+        body('currency').isIn(['INR', 'USD', 'EUR', 'GBP', 'AED', 'RUB']).notEmpty()
+    ],
     async (req, res) => {
-
-        console.log(req.body);
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
 
         try {
-            // Extract data from request body
             const {
-                name, companyName, country = "INDIA", streetAddress, city, state, pincode, mobile, email, age, bloodPressure,
-                weight = "", weightUnit = "KG", orderNotes, currency = "INR"
+                name, companyName, country, streetAddress, city, state, pincode, mobile, email, age, bloodPressure, weight, weightUnit,
+                orderNotes, currency
             } = req.body;
 
             const userID = req.userDetail._id;
@@ -107,10 +127,25 @@ router.post('/create-order',
                 return res.status(400).send('Unable to calculate cart details');
             }
 
-            const { products, totalCartPrice, deliveryCharge, totalPrice } = cartDetails;
+            const { requiresPrescription, products, totalCartPrice, deliveryCharge, totalPrice } = cartDetails;
+
+            let prescriptionURL = '';
+            let passportURL = '';
+
+            if (requiresPrescription && !req.files['prescriptionImage']) {
+                return res.status(400).send('Prescription image is required for some products in your cart.');
+            }
+
+            if (req.files['prescriptionImage']) {
+                prescriptionURL = await uploadFile(req.files['prescriptionImage'][0]);
+            }
+
+            if (req.files['passportImage']) {
+                passportURL = await uploadFile(req.files['passportImage'][0]);
+            }
 
             // Create Razorpay order
-            const razorpayOrder = await createOrder(totalPrice, currency);
+            const order = await createOrder(totalPrice, currency);
 
             // Save the order details in the database
             const newOrder = new Order({
@@ -133,11 +168,13 @@ router.post('/create-order',
                 totalCartPrice,
                 deliveryCharge,
                 totalPrice,
-                status: "Pending",
+                status: "Pending", // Set status to Pending initially
                 paymentGateway: {
-                    orderId: razorpayOrder.id
+                    orderId: order.id // Save Razorpay order ID
                 },
                 userID,
+                prescriptionURL,
+                passportURL,
                 timeStamp: new Date(),
             });
 
@@ -145,7 +182,7 @@ router.post('/create-order',
 
             // Respond with order details
             res.json({
-                orderId: razorpayOrder.id,
+                orderId: order.id,
                 currency,
                 amount: totalPrice,
                 key_id: process.env.RZPY_KEY_ID_AH
@@ -156,12 +193,6 @@ router.post('/create-order',
         }
     }
 );
-
-
-
-
-
-
 
 // Handle payment callback
 router.post('/payment-callback',
