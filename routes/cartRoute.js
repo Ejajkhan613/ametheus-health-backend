@@ -554,17 +554,17 @@ router.get('/', verifyToken, async (req, res) => {
             let itemPrice;
             if (country === "INDIA") {
                 if (currency !== "INR") {
-                    itemPrice = variant.salePrice !== 0 ? (variant.salePrice * exchangeRate.rate).toFixed(2) : (variant.price * exchangeRate.rate).toFixed(2);
+                    itemPrice = variantDetail.salePrice !== 0 ? (variantDetail.salePrice * exchangeRate.rate).toFixed(2) : (variantDetail.price * exchangeRate.rate).toFixed(2);
                 } else {
-                    itemPrice = variant.salePrice !== 0 ? variant.salePrice.toFixed(2) : variant.price.toFixed(2);
+                    itemPrice = variantDetail.salePrice !== 0 ? variantDetail.salePrice.toFixed(2) : variantDetail.price.toFixed(2);
                 }
             } else {
                 // NON-INDIA
-                const marginPercentage = variant.margin / 100;
+                const marginPercentage = variantDetail.margin / 100;
                 if (currency !== "INR") {
-                    itemPrice = variant.salePrice !== 0 ? ((variant.salePrice + (variant.salePrice * marginPercentage)) * exchangeRate.rate).toFixed(2) : ((variant.price + (variant.price * marginPercentage)) * exchangeRate.rate).toFixed(2);
+                    itemPrice = variantDetail.salePrice !== 0 ? ((variantDetail.salePrice + (variantDetail.salePrice * marginPercentage)) * exchangeRate.rate).toFixed(2) : ((variantDetail.price + (variantDetail.price * marginPercentage)) * exchangeRate.rate).toFixed(2);
                 } else {
-                    itemPrice = variant.salePrice !== 0 ? ((variant.salePrice + (variant.salePrice * marginPercentage))).toFixed(2) : ((variant.price + (variant.price * marginPercentage))).toFixed(2);
+                    itemPrice = variantDetail.salePrice !== 0 ? ((variantDetail.salePrice + (variantDetail.salePrice * marginPercentage))).toFixed(2) : ((variantDetail.price + (variantDetail.price * marginPercentage))).toFixed(2);
                 }
             }
 
