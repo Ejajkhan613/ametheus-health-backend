@@ -105,14 +105,7 @@ router.post('/create-order',
         body('weight').isFloat().optional(),
         body('weightUnit').isIn(['KG', 'IB']).optional(),
         body('orderNotes').isString().optional(),
-        body('products').isArray().withMessage('Products should be an array').notEmpty(),
-        body('currency').isIn(['INR', 'USD', 'EUR', 'GBP', 'AED', 'RUB']).notEmpty(),
-        body('totalCartPrice').isFloat().notEmpty(),
-        body('deliveryCharge').isFloat().notEmpty(),
-        body('totalPrice').isFloat().notEmpty(),
-        body('status').isIn(['Pending', 'Completed', 'Failed']).notEmpty(),
-        body('paymentGateway').isObject().withMessage('PaymentGateway should be an object').notEmpty(),
-        body('userID').isString().notEmpty(),
+        body('currency').isIn(['INR', 'USD', 'EUR', 'GBP', 'AED', 'RUB']).notEmpty()
     ],
     async (req, res) => {
         const errors = validationResult(req);
@@ -123,15 +116,18 @@ router.post('/create-order',
         try {
             const {
                 name, companyName, country, streetAddress, city, state, pincode, mobile, email, age, bloodPressure, weight, weightUnit,
-                orderNotes, products, currency, totalCartPrice, deliveryCharge, totalPrice, status, paymentGateway, userID
+                orderNotes, currency
             } = req.body;
 
-            // Check if prescription is required
+            const userID = req.userDetail._id;
+
+            // Fetch cart details for the user
             const cartDetails = await calculateTotalCartPrice(userID, country, currency);
             if (!cartDetails) {
                 return res.status(400).send('Unable to calculate cart details');
             }
-            const { requiresPrescription } = cartDetails;
+
+            const { requiresPrescription, products, totalCartPrice, deliveryCharge, totalPrice } = cartDetails;
 
             let prescriptionURL = '';
             let passportURL = '';
@@ -172,10 +168,9 @@ router.post('/create-order',
                 totalCartPrice,
                 deliveryCharge,
                 totalPrice,
-                status,
+                status: "Pending", // Set status to Pending initially
                 paymentGateway: {
-                    ...paymentGateway,
-                    orderId: order.id
+                    orderId: order.id // Save Razorpay order ID
                 },
                 userID,
                 prescriptionURL,
@@ -198,6 +193,9 @@ router.post('/create-order',
         }
     }
 );
+
+
+
 
 // Handle payment callback
 router.post('/payment-callback',

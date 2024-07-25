@@ -446,7 +446,6 @@ categoryRoute.get('/hierarchy-names', async (req, res) => {
         } else if (search) {
             searchQuery = { name: { $regex: search, $options: 'i' } };
         }
-
         // Fetch categories with only _id and name fields, filtered by search if provided
         const categories = await Category.find(searchQuery, '_id name parent slug image').lean();
 

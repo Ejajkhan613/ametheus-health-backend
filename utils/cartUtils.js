@@ -18,11 +18,18 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
         let totalCartPrice = 0;
         let deliveryCharge = 0;
         let totalPrice = 0;
+        let requiresPrescription = false;
+        const products = [];
 
         // Calculate total price and delivery charge based on country and currency
         for (const item of cart.cartDetails) {
-            const { variantDetail, quantity } = item;
+            const { variantDetail, quantity, productID } = item;
             let itemPrice = variantDetail.salePrice || variantDetail.price;
+
+            // Check if the product requires a prescription
+            if (productID.requiresPrescription) {
+                requiresPrescription = true;
+            }
 
             if (country !== 'India') {
                 const margin = variantDetail.margin || 0;
@@ -30,6 +37,12 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
             }
 
             totalCartPrice += itemPrice * quantity;
+            products.push({
+                productID: productID._id,
+                variantID: variantDetail._id,
+                quantity,
+                price: itemPrice
+            });
         }
 
         // Fetch delivery charge if applicable
@@ -46,7 +59,7 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
             totalPrice = totalCartPrice + deliveryCharge;
         }
 
-        return { totalCartPrice, deliveryCharge, totalPrice };
+        return { requiresPrescription, products, totalCartPrice, deliveryCharge, totalPrice };
     } catch (error) {
         console.error(error);
         throw new Error('Error calculating cart price');
