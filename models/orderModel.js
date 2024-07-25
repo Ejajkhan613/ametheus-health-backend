@@ -57,7 +57,7 @@ const orderSchema = new mongoose.Schema({
   },
   weightUnit: {
     type: String,
-    enum: ['KG', 'IB'],
+    enum: ['KG', 'LB'],
     default: "KG",
   },
   prescriptionURL: {
