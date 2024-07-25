@@ -87,6 +87,21 @@ const createOrder = async (totalCartPrice, currency) => {
 };
 
 router.post('/create-order',
+    [
+        body('name').isString().notEmpty().withMessage('Name is required'),
+        body('companyName').isString().optional(),
+        body('country').isString().notEmpty().withMessage('Country is required'),
+        body('streetAddress').isString().notEmpty().withMessage('Street address is required'),
+        body('city').isString().notEmpty().withMessage('City is required'),
+        body('state').isString().notEmpty().withMessage('State is required'),
+        body('pincode').isString().notEmpty().withMessage('Pincode is required'),
+        body('mobile').isString().notEmpty().withMessage('Mobile number is required'),
+        body('email').isEmail().notEmpty().withMessage('Valid email is required'),
+        body('age').isInt({ min: 0 }).notEmpty().withMessage('Age is required and must be a positive integer'),
+        body('bloodPressure').isString().optional(),
+        body('orderNotes').isString().optional(),
+        body('currency').isIn(['INR', 'USD', 'EUR', 'GBP', 'AED', 'RUB']).withMessage('Invalid currency')
+    ],
     verifyToken,
     async (req, res) => {
 
@@ -111,62 +126,7 @@ router.post('/create-order',
                 return res.status(400).send('Unable to calculate cart details');
             }
 
-            const { requiresPrescription, products, totalCartPrice, deliveryCharge, totalPrice } = cartDetails;
-
-            // let prescriptionURL = '';
-            // let passportURL = '';
-
-            console.log(req.files);
-            // Check if prescription image is required and handle file upload
-            // if (requiresPrescription) {
-            //     if (!req.files || !req.files['prescriptionImage'] || req.files['prescriptionImage'].length === 0) {
-            //         return res.status(400).send('Prescription image is required for some products in your cart.');
-            //     }
-
-            //     const file = req.files['prescriptionImage'][0];
-            //     if (file) {
-            //         if (!file.mimetype.startsWith('image/')) {
-            //             return res.status(400).send('Prescription image must be an image file.');
-            //         }
-
-            //         const maxFileSize = 10 * 1024 * 1024; // 10 MB
-            //         if (file.size > maxFileSize) {
-            //             return res.status(400).send('Prescription image size exceeds the 10 MB limit.');
-            //         }
-
-            //         try {
-            //             prescriptionURL = await uploadFile(file);
-            //         } catch (uploadError) {
-            //             console.error('Error uploading prescription image:', uploadError);
-            //             return res.status(500).send('Error uploading prescription image.');
-            //         }
-            //     }
-            // }
-
-            // if (req.files && req.files['passportImage']) {
-            //     if (req.files['passportImage'].length > 0) {
-            //         const file = req.files['passportImage'][0];
-            //         if (file) {
-            //             if (!file.mimetype.startsWith('image/')) {
-            //                 return res.status(400).send('Passport image must be an image file.');
-            //             }
-
-            //             const maxFileSize = 10 * 1024 * 1024; // 10 MB
-            //             if (file.size > maxFileSize) {
-            //                 return res.status(400).send('Passport image size exceeds the 10 MB limit.');
-            //             }
-
-            //             try {
-            //                 passportURL = await uploadFile(file);
-            //             } catch (uploadError) {
-            //                 console.error('Error uploading passport image:', uploadError);
-            //                 return res.status(500).send('Error uploading passport image.');
-            //             }
-            //         }
-            //     } else {
-            //         return res.status(400).send('Passport image file is required.');
-            //     }
-            // }
+            const { products, totalCartPrice, deliveryCharge, totalPrice } = cartDetails;
 
             // Create Razorpay order
             const razorpayOrder = await createOrder(totalPrice, currency);
@@ -197,8 +157,6 @@ router.post('/create-order',
                     orderId: razorpayOrder.id
                 },
                 userID,
-                prescriptionURL,
-                passportURL,
                 timeStamp: new Date(),
             });
 
