@@ -436,8 +436,15 @@ categoryRoute.get('/hierarchy-names', async (req, res) => {
     try {
         const { data, search } = req.query;
 
-        // Build query object for searching by name
-        const searchQuery = search ? { name: { $regex: search, $options: 'i' } } : {};
+        // Build query object for searching by name or ID
+        let searchQuery = {};
+
+        // Check if the search value is a valid MongoDB ObjectId
+        if (search && mongoose.Types.ObjectId.isValid(search)) {
+            searchQuery = { _id: mongoose.Types.ObjectId(search) };
+        } else if (search) {
+            searchQuery = { name: { $regex: search, $options: 'i' } };
+        }
 
         // Fetch categories with only _id and name fields, filtered by search if provided
         const categories = await Category.find(searchQuery, '_id name parent slug image').lean();
