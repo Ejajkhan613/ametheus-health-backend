@@ -111,7 +111,8 @@ manufacturerRouter.get('/', async (req, res) => {
                 searchQuery = {
                     $or: [
                         { name: { $regex: search, $options: 'i' } }, // Case-insensitive search
-                        { slug: { $regex: search, $options: 'i' } }
+                        { slug: { $regex: search, $options: 'i' } },
+                        { address: { $regex: search, $options: 'i' } }
                     ]
                 };
             }
