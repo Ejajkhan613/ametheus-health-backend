@@ -4,7 +4,7 @@ const verifyToken = require('../middlewares/auth');
 const ProductModel = require('../models/productModel');
 const WishlistItem = require('../models/wishlistModel');
 const CartModel = require('../models/cartModel');
-const ExchangeRateModel = require('../models/currencyPriceModel');
+const ExchangeRate = require('../models/currencyPriceModel');
 
 // Route to process multiple products (Not Authorized)
 router.post('/batch', async (req, res) => {
@@ -14,7 +14,7 @@ router.post('/batch', async (req, res) => {
         // Fetch exchange rate for the selected currency if it's not INR
         let exchangeRate = { rate: 1, symbol: '₹' }; // Default for INR
         if (currency !== 'INR') {
-            exchangeRate = await ExchangeRateModel.findOne({ currency: currency });
+            exchangeRate = await ExchangeRate.findOne({ currency: currency });
             if (!exchangeRate) {
                 return res.status(404).json({ message: 'Exchange rate not found for the selected currency' });
             }
@@ -376,7 +376,7 @@ router.post('/', verifyToken, async (req, res) => {
         // Fetch exchange rate for the selected currency if it's not INR
         let exchangeRate = { rate: 1, symbol: '₹' }; // Default for INR
         if (currency !== 'INR') {
-            exchangeRate = await ExchangeRateModel.findOne({ currency: currency });
+            exchangeRate = await ExchangeRate.findOne({ currency: currency });
             if (!exchangeRate) {
                 return res.status(404).json({ message: 'Exchange rate not found for the selected currency' });
             }
@@ -525,7 +525,7 @@ router.get('/', verifyToken, async (req, res) => {
         // Fetch exchange rate for the selected currency if it's not INR
         let exchangeRate = { rate: 1, symbol: '₹' }; // Default for INR
         if (currency !== 'INR') {
-            exchangeRate = await ExchangeRateModel.findOne({ currency: currency });
+            exchangeRate = await ExchangeRate.findOne({ currency: currency });
             if (!exchangeRate) {
                 return res.status(404).json({ message: 'Exchange rate not found for the selected currency' });
             }
@@ -733,7 +733,7 @@ router.delete('/remove', verifyToken, async (req, res) => {
         let symbol = '₹';
 
         if (currency !== 'INR') {
-            const exchangeRate = await ExchangeRateModel.findOne({ currency: currency });
+            const exchangeRate = await ExchangeRate.findOne({ currency: currency });
             if (!exchangeRate) return res.status(404).json({ message: 'Exchange rate not found for the selected currency' });
 
             totalPriceInCurrency = (totalPrice * exchangeRate.rate).toFixed(2);
@@ -868,7 +868,7 @@ router.post('/add-from-wishlist', verifyToken, async (req, res) => {
         let deliveryChargeInCurrency = deliveryCharge;
         let symbol = '₹';
         if (currency !== 'INR') {
-            const exchangeRate = await ExchangeRateModel.findOne({ currency: currency });
+            const exchangeRate = await ExchangeRate.findOne({ currency: currency });
             if (!exchangeRate) {
                 return res.status(404).json({ msg: 'Exchange rate not found for the selected currency' });
             }
@@ -1042,7 +1042,7 @@ router.post('/add-one-wishlist', verifyToken, async (req, res) => {
         let deliveryChargeInCurrency = deliveryCharge;
         let symbol = '₹';
         if (currency !== 'INR') {
-            const exchangeRate = await ExchangeRateModel.findOne({ currency: currency });
+            const exchangeRate = await ExchangeRate.findOne({ currency: currency });
             if (!exchangeRate) {
                 return res.status(404).json({ msg: 'Exchange rate not found for the selected currency' });
             }

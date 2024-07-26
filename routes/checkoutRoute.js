@@ -173,8 +173,7 @@ router.post('/create-order',
                 },
                 userID,
                 prescriptionURL,
-                passportURL,
-                timeStamp: new Date(),
+                passportURL
             });
 
             await newOrder.save();

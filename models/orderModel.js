@@ -79,6 +79,14 @@ const orderSchema = new mongoose.Schema({
       ref: 'Variant',
       default: null,
     },
+    productDetail: {
+      type: {},
+      default: {}
+    },
+    variantDetail: {
+      type: {},
+      default: {}
+    },
   }],
   currency: {
     type: String,
@@ -119,7 +127,7 @@ const orderSchema = new mongoose.Schema({
       default: null,
     },
   },
-}, { timestamps: true });
+}, { timestamps: true, });
 
 const Order = mongoose.model('Order', orderSchema);
 
