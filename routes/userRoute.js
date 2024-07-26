@@ -247,10 +247,10 @@ userRouter.patch('/', Limiter, userValidation, verifyToken, async (req, res) => 
 
         // Update user details
         const updateData = {};
-        if (name !== undefined) updateData.name = name;
-        if (gender !== undefined) updateData.gender = gender;
-        if (dateOfBirth !== undefined) updateData.dateOfBirth = dateOfBirth;
-        if (mobile !== undefined) updateData.mobile = mobile;
+        if (!name) updateData.name = name;
+        if (!gender) updateData.gender = gender;
+        if (!dateOfBirth) updateData.dateOfBirth = dateOfBirth;
+        if (!mobile) updateData.mobile = mobile;
 
         const updatedUser = await UserModel.findByIdAndUpdate(userId, updateData, { new: true });
 
