@@ -218,20 +218,19 @@ userRouter.post('/login', Limiter, validateLogin, async (req, res) => {
 const userValidation = [
     body('name').optional().isString().withMessage('Name must be a string'),
     body('gender').optional().isString().withMessage('Gender must be a string'),
-    body('dateOfBirth').optional().isISO8601().toDate().withMessage('Date of Birth must be a valid date'),
     body('mobile').optional().isString().withMessage('Mobile must be a string')
 ];
 
 // User Account Details Update
 userRouter.patch('/', Limiter, userValidation, verifyToken, async (req, res) => {
-    const { name, gender, dateOfBirth = "", mobile } = req.body;
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
-
+    
     try {
         const userId = req.userDetail._id;
+        const { name, gender, dateOfBirth = "", mobile } = req.body;
 
         // Find the user by ID
         const user = await UserModel.findById(userId);
