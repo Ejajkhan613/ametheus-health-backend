@@ -1,7 +1,10 @@
 const express = require('express');
-const { body, validationResult } = require('express-validator');
+const mongoose = require('mongoose');
 const slugify = require('slugify');
+const { body, validationResult } = require('express-validator');
+
 const verifyToken = require('../middlewares/auth');
+
 const ManufacturerModel = require('../models/manufacturerModel');
 const ProductModel = require('../models/productModel');
 
@@ -84,8 +87,6 @@ manufacturerRouter.patch('/:id', validateManufacturer, verifyToken, async (req, 
     }
 });
 
-
-const mongoose = require('mongoose');
 
 // Get all manufacturers with search and pagination
 manufacturerRouter.get('/', async (req, res) => {
