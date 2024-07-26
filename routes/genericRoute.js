@@ -35,17 +35,25 @@ const validateGeneric = [
     body('faq').optional().isString()
 ];
 
-// GET all generics
+const mongoose = require('mongoose');
+
+// GET all generics with search, pagination, and sorting
 genericRoute.get('/', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
-        const filters = {};
+        // Determine if search term is a valid ObjectId
+        const isValidObjectId = mongoose.Types.ObjectId.isValid(req.query.search || '');
+        let filters = {};
 
-        if (req.query.name) filters.name = new RegExp(req.query.name, 'i');
-        if (req.query.slug) filters.slug = new RegExp(req.query.slug, 'i');
+        if (isValidObjectId) {
+            filters._id = mongoose.Types.ObjectId(req.query.search);
+        } else {
+            if (req.query.name) filters.name = new RegExp(req.query.name, 'i');
+            if (req.query.slug) filters.slug = new RegExp(req.query.slug, 'i');
+        }
 
         const sortOptions = {};
         const { sortBy = 'name', order = 'asc' } = req.query;
@@ -56,7 +64,7 @@ genericRoute.get('/', async (req, res) => {
         const totalCount = await GenericModel.countDocuments(filters);
         const totalPages = Math.ceil(totalCount / limit);
 
-        const Generics = await GenericModel.find(filters)
+        const generics = await GenericModel.find(filters)
             .skip(skip)
             .limit(limit)
             .sort(sortOptions)
@@ -65,7 +73,7 @@ genericRoute.get('/', async (req, res) => {
 
         res.status(200).send({
             msg: 'Success',
-            data: Generics,
+            data: generics,
             page,
             limit,
             totalPages,
@@ -73,9 +81,10 @@ genericRoute.get('/', async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching generics:', error);
-        return res.status(500).json({ msg: 'Internal server error, try again later' });
+        res.status(500).json({ msg: 'Internal server error, try again later' });
     }
 });
+
 
 // GET all generics with optional search by name or ID
 genericRoute.get('/names', verifyToken, async (req, res) => {
