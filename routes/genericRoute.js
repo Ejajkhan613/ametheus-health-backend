@@ -45,9 +45,7 @@ genericRoute.get('/', async (req, res) => {
         const filters = {};
 
         if (req.query.name) filters.name = new RegExp(req.query.name, 'i');
-        // if (mongoose.Types.ObjectId.isValid(req.query.name)) {
-        //     filters._id = req.query.name;
-        // }
+        if (req.query.slug) filters.slug = new RegExp(req.query.slug, 'i');
 
         const sortOptions = {};
         const { sortBy = 'name', order = 'asc' } = req.query;

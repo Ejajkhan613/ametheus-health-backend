@@ -85,16 +85,61 @@ manufacturerRouter.patch('/:id', validateManufacturer, verifyToken, async (req, 
 });
 
 
-// Get all manufacturers
+const mongoose = require('mongoose');
+
+// Get all manufacturers with search and pagination
 manufacturerRouter.get('/', async (req, res) => {
     try {
-        const manufacturers = await ManufacturerModel.find().select('-__v');
-        res.status(200).json({ msg: 'Success', data: manufacturers });
+        const { page = 1, limit = 10, search = '' } = req.query;
+
+        // Convert `page` and `limit` to integers
+        const pageNumber = parseInt(page, 10);
+        const limitNumber = parseInt(limit, 10);
+
+        // Set default values for pagination
+        const skip = (pageNumber - 1) * limitNumber;
+
+        // Determine if search term is a valid ObjectId
+        const isValidObjectId = mongoose.Types.ObjectId.isValid(search);
+        let searchQuery = {};
+
+        if (search) {
+            if (isValidObjectId) {
+                searchQuery = { _id: mongoose.Types.ObjectId(search) };
+            } else {
+                searchQuery = {
+                    $or: [
+                        { name: { $regex: search, $options: 'i' } }, // Case-insensitive search
+                        { slug: { $regex: search, $options: 'i' } }
+                    ]
+                };
+            }
+        }
+
+        // Fetch manufacturers with search and pagination
+        const manufacturers = await ManufacturerModel.find(searchQuery)
+            .skip(skip)
+            .limit(limitNumber)
+            .select('-__v');
+
+        // Count total number of documents matching the search query
+        const totalManufacturers = await ManufacturerModel.countDocuments(searchQuery);
+
+        res.status(200).json({
+            msg: 'Success',
+            data: manufacturers,
+            page: pageNumber,
+            limit: limitNumber,
+            totalPages: Math.ceil(totalManufacturers / limitNumber),
+            totalCount: totalManufacturers
+        });
     } catch (error) {
         console.error('Error fetching manufacturers:', error);
         res.status(500).json({ msg: 'Internal server error, try again later' });
     }
 });
+
+
 
 
 // Get a manufacturer by ID
