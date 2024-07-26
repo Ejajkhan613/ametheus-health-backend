@@ -183,7 +183,7 @@ router.post('/create-order',
             res.json({
                 orderId: order.id,
                 currency,
-                amount: totalPrice,
+                amount: totalCartPrice,
                 key_id: process.env.RZPY_KEY_ID_AH
             });
         } catch (error) {
