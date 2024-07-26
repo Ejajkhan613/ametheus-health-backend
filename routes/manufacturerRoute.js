@@ -148,10 +148,12 @@ manufacturerRouter.get('/', async (req, res) => {
 manufacturerRouter.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const manufacturer = await ManufacturerModel.findById(id).select('-__v');
+        const manufacturer = await ManufacturerModel.findById(id).select('-__v').lean();
         if (!manufacturer) {
             return res.status(404).json({ msg: 'Manufacturer not found' });
         }
+        const products = await ProductModel.find({ manufacturerID: id });
+        manufacturer.products = products;
         res.status(200).json({ msg: 'Success', data: manufacturer });
     } catch (error) {
         console.error('Error fetching manufacturer:', error);
