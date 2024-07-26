@@ -224,6 +224,7 @@ const userValidation = [
 
 // User Account Details Update
 userRouter.patch('/', Limiter, userValidation, verifyToken, async (req, res) => {
+    const { name, gender, dateOfBirth = "", mobile } = req.body;
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -231,8 +232,6 @@ userRouter.patch('/', Limiter, userValidation, verifyToken, async (req, res) => 
 
     try {
         const userId = req.userDetail._id;
-        const { name, gender, dateOfBirth = "", mobile } = req.body;
-        console.log(dateOfBirth);
 
         // Find the user by ID
         const user = await UserModel.findById(userId);
