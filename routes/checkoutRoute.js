@@ -326,7 +326,7 @@ router.get('/admin/user-orders/:userID', verifyToken, async (req, res) => {
 router.get('/user/orders', verifyToken, async (req, res) => {
     try {
         const { filter = 'all', sort = 'latest' } = req.query;
-        const userID = req.user.id; // Assumes user ID is attached to req.user by verifyToken
+        const userID = req.userDetail.id; // Assumes user ID is attached to req.user by verifyToken
 
         // Build query based on filter
         let query = { userID };
