@@ -23,7 +23,6 @@ async function createSlug(text) {
     return uniqueSlug;
 }
 
-
 // Validation middleware for manufacturer operations
 const validateManufacturer = [
     body('name').notEmpty().withMessage('Name is required'),
@@ -57,7 +56,6 @@ manufacturerRouter.post('/', validateManufacturer, verifyToken, async (req, res)
     }
 });
 
-
 // Update a manufacturer
 manufacturerRouter.patch('/:id', validateManufacturer, verifyToken, async (req, res) => {
     if (req.userDetail.role !== "admin") {
@@ -86,7 +84,6 @@ manufacturerRouter.patch('/:id', validateManufacturer, verifyToken, async (req, 
         res.status(500).json({ msg: 'Internal server error, try again later' });
     }
 });
-
 
 // Get all manufacturers with search and pagination
 manufacturerRouter.get('/', async (req, res) => {
@@ -141,8 +138,42 @@ manufacturerRouter.get('/', async (req, res) => {
     }
 });
 
+// Get all manufacturers with search and pagination
+manufacturerRouter.get('/names', async (req, res) => {
+    try {
+        const { search = '' } = req.query;
 
 
+        // Determine if search term is a valid ObjectId
+        const isValidObjectId = mongoose.Types.ObjectId.isValid(search);
+        let searchQuery = {};
+
+        if (search) {
+            if (isValidObjectId) {
+                searchQuery = { _id: search };
+            } else {
+                searchQuery = {
+                    $or: [
+                        { name: { $regex: search, $options: 'i' } }, // Case-insensitive search
+                        { slug: { $regex: search, $options: 'i' } },
+                        { address: { $regex: search, $options: 'i' } }
+                    ]
+                };
+            }
+        }
+
+        // Fetch manufacturers with search and pagination
+        const manufacturers = await ManufacturerModel.find(searchQuery).select('name');
+
+        res.status(200).json({
+            msg: 'Success',
+            data: manufacturers
+        });
+    } catch (error) {
+        console.error('Error fetching manufacturers:', error);
+        res.status(500).json({ msg: 'Internal server error, try again later' });
+    }
+});
 
 // Get a manufacturer by ID
 manufacturerRouter.get('/:id', async (req, res) => {
@@ -160,7 +191,6 @@ manufacturerRouter.get('/:id', async (req, res) => {
         res.status(500).json({ msg: 'Internal server error, try again later' });
     }
 });
-
 
 // Delete a manufacturer
 manufacturerRouter.delete('/:id', verifyToken, async (req, res) => {
@@ -186,7 +216,6 @@ manufacturerRouter.delete('/:id', verifyToken, async (req, res) => {
         res.status(500).json({ msg: 'Internal server error, try again later' });
     }
 });
-
 
 // Get all products for a specific manufacturer (currency added)
 manufacturerRouter.get('/:id/product', async (req, res) => {
