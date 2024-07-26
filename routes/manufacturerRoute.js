@@ -106,7 +106,7 @@ manufacturerRouter.get('/', async (req, res) => {
 
         if (search) {
             if (isValidObjectId) {
-                searchQuery = { _id: mongoose.Types.ObjectId(search) };
+                searchQuery = { _id: search };
             } else {
                 searchQuery = {
                     $or: [
