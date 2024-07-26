@@ -231,7 +231,7 @@ userRouter.patch('/', Limiter, userValidation, verifyToken, async (req, res) => 
 
     try {
         const userId = req.userDetail._id;
-        const { name, gender, dateOfBirth, mobile } = req.body;
+        const { name, gender, dateOfBirth = "", mobile } = req.body;
 
         // Find the user by ID
         const user = await UserModel.findById(userId);
