@@ -67,6 +67,7 @@ const calculateTotalCartPrice = async (userID, country = "INDIA", currency = "IN
                 products.push({
                     productID: product._id,
                     title: product.title,
+                    images: product.images,
                     variantID: variant._id,
                     packSize: variant.packSize,
                     margin: variant.margin,

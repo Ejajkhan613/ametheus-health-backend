@@ -70,6 +70,10 @@ const orderSchema = new mongoose.Schema({
       ref: 'Product',
       required: true
     },
+    images: {
+      type: [],
+      default: []
+    },
     quantity: {
       type: Number,
       required: true
