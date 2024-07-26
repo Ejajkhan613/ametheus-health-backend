@@ -191,6 +191,52 @@ manufacturerRouter.get('/:id', async (req, res) => {
     }
 });
 
+// Remove or update a manufacturerID of a specific product
+manufacturerRouter.patch('/rmid/:pid', verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).json({ msg: 'Access Denied' });
+    }
+
+    try {
+        const { pid } = req.params;
+        const { manufacturerID } = req.body;
+
+        // Validate product ID
+        if (!pid || !mongoose.Types.ObjectId.isValid(pid)) {
+            return res.status(400).send({ msg: 'Product ID is not valid' });
+        }
+
+        const product = await ProductModel.findById(pid);
+        if (!product) {
+            return res.status(404).send({ msg: 'Product Not Found' });
+        }
+
+        // Validate and update manufacturerID
+        if (manufacturerID) {
+            if (!mongoose.Types.ObjectId.isValid(manufacturerID)) {
+                return res.status(400).send({ msg: 'Manufacturer ID is not valid' });
+            }
+
+            const manufacturer = await ManufacturerModel.findById(manufacturerID);
+            if (!manufacturer) {
+                return res.status(404).send({ msg: 'Manufacturer Not Found' });
+            }
+
+            // Update product's manufacturerID to the new one
+            await ProductModel.findByIdAndUpdate(pid, { $set: { manufacturerID } });
+        } else {
+            // Clear the manufacturerID if not provided
+            await ProductModel.findByIdAndUpdate(pid, { $set: { manufacturerID: '' } });
+        }
+
+        res.status(200).json({ msg: 'Manufacturer ID updated successfully' });
+    } catch (error) {
+        console.error('Error updating manufacturer ID:', error);
+        res.status(500).json({ msg: 'Internal server error, try again later' });
+    }
+});
+
+
 // Delete a manufacturer
 manufacturerRouter.delete('/:id', verifyToken, async (req, res) => {
     if (req.userDetail.role !== "admin") {
