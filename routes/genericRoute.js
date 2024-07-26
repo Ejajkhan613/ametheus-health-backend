@@ -35,7 +35,6 @@ const validateGeneric = [
     body('faq').optional().isString()
 ];
 
-const mongoose = require('mongoose');
 
 // GET all generics with search, pagination, and sorting
 genericRoute.get('/', async (req, res) => {
