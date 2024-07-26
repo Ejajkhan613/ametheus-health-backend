@@ -340,19 +340,19 @@ router.get('/user/orders', verifyToken, async (req, res) => {
         let sortOption;
         switch (sort) {
             case 'latest':
-                sortOption = { timeStamp: -1 };
+                sortOption = { createdAt: -1 };
                 break;
             case 'oldest':
-                sortOption = { timeStamp: 1 };
+                sortOption = { createdAt: 1 };
                 break;
             case 'highest_payment':
-                sortOption = { totalPrice: -1 };
+                sortOption = { totalCartPrice: -1 };
                 break;
             case 'lowest_payment':
-                sortOption = { totalPrice: 1 };
+                sortOption = { totalCartPrice: 1 };
                 break;
             default:
-                sortOption = { timeStamp: -1 };
+                sortOption = { createdAt: -1 };
                 break;
         }
 
