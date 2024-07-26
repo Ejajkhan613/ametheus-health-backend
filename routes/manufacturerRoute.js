@@ -143,7 +143,6 @@ manufacturerRouter.get('/names', async (req, res) => {
     try {
         const { search = '' } = req.query;
 
-
         // Determine if search term is a valid ObjectId
         const isValidObjectId = mongoose.Types.ObjectId.isValid(search);
         let searchQuery = {};

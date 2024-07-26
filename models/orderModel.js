@@ -68,63 +68,67 @@ const orderSchema = new mongoose.Schema({
     productID: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Product',
-      required: true,
+      required: true
     },
     quantity: {
       type: Number,
-      required: true,
+      required: true
     },
     variantID: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Variant',
-      default: null,
+      required: true
     },
-    productDetail: {
-      type: {},
-      default: {}
+    title: {
+      type: String,
+      default: ""
     },
-    variantDetail: {
-      type: {},
-      default: {}
+    packSize: {
+      type: String,
+      default: ""
+    },
+    margin: {
+      type: Number,
+      default: 0
     },
   }],
   currency: {
     type: String,
-    required: true,
+    required: true
   },
   totalCartPrice: {
     type: Number,
-    required: true,
+    required: true
   },
   deliveryCharge: {
     type: Number,
-    required: true,
+    required: true
   },
   totalPrice: {
     type: Number,
-    required: true,
+    required: true
   },
   status: {
     type: String,
     enum: ['Pending', 'Accepted', 'Rejected', 'Processing Order', 'Shipped', 'Delivered'],
-    default: 'Pending',
+    default: 'Pending'
   },
   trackingLink: {
     type: String,
-    default: null,
+    default: null
   },
   payment: {
     orderId: {
       type: String,
-      default: null,
+      default: null
     },
     paymentId: {
       type: String,
-      default: null,
+      default: null
     },
     signature: {
       type: String,
-      default: null,
+      default: null
     },
   },
 }, { timestamps: true, });
