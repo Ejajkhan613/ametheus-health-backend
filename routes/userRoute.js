@@ -227,7 +227,7 @@ userRouter.patch('/', Limiter, userValidation, verifyToken, async (req, res) => 
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
-    
+
     try {
         const userId = req.userDetail._id;
         const { name, gender, dateOfBirth = "", mobile } = req.body;
@@ -247,7 +247,7 @@ userRouter.patch('/', Limiter, userValidation, verifyToken, async (req, res) => 
         const updateData = {};
         if (!name) updateData.name = name;
         if (!gender) updateData.gender = gender;
-        if (!dateOfBirth) updateData.dateOfBirth = dateOfBirth;
+        if (!dateOfBirth) updateData.dateOfBirth = dateOfBirth || "";
         if (!mobile) updateData.mobile = mobile;
 
         const updatedUser = await UserModel.findByIdAndUpdate(userId, updateData, { new: true });
