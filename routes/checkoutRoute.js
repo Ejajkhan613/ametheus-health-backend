@@ -142,9 +142,9 @@ router.post('/create-order',
             //     passportURL = await uploadFile(req.files['passportImage'][0]);
             // }
 
-            console.log(totalCartPrice);
+            console.log(+(totalCartPrice.replace(',', '')));
             // Create Razorpay order
-            const order = await createOrder(+totalCartPrice, currency);
+            const order = await createOrder(+(totalCartPrice.replace(',', '')), currency);
             console.log(order.id);
 
             // Save the order details in the database
