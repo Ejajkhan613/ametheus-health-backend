@@ -41,7 +41,7 @@ manufacturerRouter.post('/', validateManufacturer, verifyToken, async (req, res)
     }
 
     try {
-        const { name, address } = req.body;
+        const { name, address = "" } = req.body;
         const slug = await createSlug(name);
         const newManufacturer = new ManufacturerModel({ name, slug, address });
         await newManufacturer.save();
