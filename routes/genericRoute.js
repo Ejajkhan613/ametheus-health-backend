@@ -49,7 +49,7 @@ genericRoute.get('/', async (req, res) => {
         console.log("OBJECTID",isValidObjectId, "ID", req.query.name);
 
         if (isValidObjectId) {
-            filters._id = mongoose.Types.ObjectId(req.query.name);
+            filters._id = req.query.name;
         } else {
             if (req.query.name) filters.name = new RegExp(req.query.name, 'i');
             if (req.query.slug) filters.slug = new RegExp(req.query.slug, 'i');
