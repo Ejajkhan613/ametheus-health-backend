@@ -303,6 +303,34 @@ categoryRoute.patch('/:id', verifyToken, [
     }
 });
 
+// Route to update or clear categoryID for a list of products
+productRoute.post('/rmcg', verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).json({ msg: 'Access Denied' });
+    }
+
+    const { products, categoryID } = req.body;
+
+    if (!products || !Array.isArray(products) || products.length === 0) {
+        return res.status(400).json({ msg: 'Product IDs are required' });
+    }
+
+    try {
+        // Determine the update operation based on the presence of categoryID
+        const updateData = categoryID ? { categoryID } : { categoryID: "" };
+
+        // Update the categoryID for the provided product IDs
+        const result = await ProductModel.updateMany(
+            { _id: { $in: products } },
+            { $set: updateData }
+        );
+
+        res.status(200).json({ msg: 'Products updated successfully', count: result.modifiedCount });
+    } catch (error) {
+        console.error('Error updating categoryID:', error);
+        res.status(500).json({ msg: 'Internal server error, try again later' });
+    }
+});
 
 // Get All Categories with conditional fields
 categoryRoute.get('/view', async (req, res) => {

@@ -192,46 +192,34 @@ manufacturerRouter.get('/:id', async (req, res) => {
 });
 
 // Remove or update a manufacturerID of a specific product
-manufacturerRouter.patch('/rmid/:pid', verifyToken, async (req, res) => {
+manufacturerRouter.patch('/rmid', verifyToken, async (req, res) => {
     if (req.userDetail.role !== "admin") {
         return res.status(400).json({ msg: 'Access Denied' });
     }
 
+    const { products, manufacturerID } = req.body;
+
+    if (!products || !Array.isArray(products) || products.length === 0) {
+        return res.status(400).json({ msg: 'Product IDs are required' });
+    }
+
     try {
-        const { pid } = req.params;
-        const { manufacturerID } = req.body;
+        // Determine the update operation based on the presence of manufacturerID
+        const updateData = manufacturerID ? { manufacturerID } : { manufacturerID: "" };
 
-        // Validate product ID
-        if (!pid || !mongoose.Types.ObjectId.isValid(pid)) {
-            return res.status(400).send({ msg: 'Product ID is not valid' });
+        // Update the manufacturerID for the provided product IDs
+        const result = await ProductModel.updateMany(
+            { _id: { $in: products } },
+            { $set: updateData }
+        );
+
+        if (result.modifiedCount === 0) {
+            return res.status(404).json({ msg: 'No products found with the provided IDs' });
         }
 
-        const product = await ProductModel.findById(pid);
-        if (!product) {
-            return res.status(404).send({ msg: 'Product Not Found' });
-        }
-
-        // Validate and update manufacturerID
-        if (manufacturerID) {
-            if (!mongoose.Types.ObjectId.isValid(manufacturerID)) {
-                return res.status(400).send({ msg: 'Manufacturer ID is not valid' });
-            }
-
-            const manufacturer = await ManufacturerModel.findById(manufacturerID);
-            if (!manufacturer) {
-                return res.status(404).send({ msg: 'Manufacturer Not Found' });
-            }
-
-            // Update product's manufacturerID to the new one
-            await ProductModel.findByIdAndUpdate(pid, { $set: { manufacturerID } });
-        } else {
-            // Clear the manufacturerID if not provided
-            await ProductModel.findByIdAndUpdate(pid, { $set: { manufacturerID: '' } });
-        }
-
-        res.status(200).json({ msg: 'Manufacturer ID updated successfully' });
+        res.status(200).json({ msg: 'Products updated successfully', modifiedCount: result.modifiedCount });
     } catch (error) {
-        console.error('Error updating manufacturer ID:', error);
+        console.error('Error updating manufacturerID:', error);
         res.status(500).json({ msg: 'Internal server error, try again later' });
     }
 });
