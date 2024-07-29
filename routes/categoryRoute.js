@@ -304,7 +304,7 @@ categoryRoute.patch('/:id', verifyToken, [
 });
 
 // Route to update or clear categoryID for a list of products
-productRoute.post('/rmcg', verifyToken, async (req, res) => {
+categoryRoute.post('/rmcg', verifyToken, async (req, res) => {
     if (req.userDetail.role !== "admin") {
         return res.status(400).json({ msg: 'Access Denied' });
     }
