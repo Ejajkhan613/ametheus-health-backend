@@ -104,7 +104,6 @@ productRoute.post('/import', verifyToken, async (req, res) => {
         }
 
         const slug = await createSlug(row.Title);
-        console.log("SLUG-CREATED",slug);
         console.log("DATA-ADDED", count);
         count++;
 

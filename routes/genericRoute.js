@@ -46,6 +46,7 @@ genericRoute.get('/', async (req, res) => {
         // Determine if search term is a valid ObjectId
         const isValidObjectId = mongoose.Types.ObjectId.isValid(req.query.search || '');
         let filters = {};
+        console.log("OBJECTID",isValidObjectId, "ID", req.query.search);
 
         if (isValidObjectId) {
             filters._id = mongoose.Types.ObjectId(req.query.search);
