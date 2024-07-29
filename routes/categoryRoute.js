@@ -157,7 +157,7 @@ categoryRoute.delete('/:id/image', verifyToken, async (req, res) => {
 });
 
 // Add Document to Category
-categoryRoute.patch('/:id/docFile', verifyToken, upload.single('file'), async (req, res) => {
+categoryRoute.patch('/:id/docFile', verifyToken, upload.single('docFileURL'), async (req, res) => {
     if (req.userDetail.role !== "admin") {
         return res.status(400).json({ msg: 'Access Denied' });
     }
