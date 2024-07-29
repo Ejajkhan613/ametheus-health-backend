@@ -70,7 +70,7 @@ genericRoute.get('/', async (req, res) => {
             .sort(sortOptions)
             .collation({ locale: 'en', strength: 2 })
             .lean();
-            console.log("QUERY",totalPages);
+            console.log("QUERY",generics);
 
         res.status(200).send({
             msg: 'Success',
