@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
+const fs = require('fs');
 const crypto = require('crypto');
 const fileUpload = require('express-fileupload');
 const xlsx = require('xlsx');
@@ -63,7 +64,7 @@ productRoute.post('/import', verifyToken, async (req, res) => {
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
     const jsonData = xlsx.utils.sheet_to_json(sheet);
-
+    let count = 1;
     const products = await Promise.all(jsonData.map(async row => {
         const variants = [];
         let index = 1;
@@ -103,6 +104,9 @@ productRoute.post('/import', verifyToken, async (req, res) => {
         }
 
         const slug = await createSlug(row.Title);
+        console.log("SLUG-CREATED",slug);
+        console.log("DATA-ADDED", count);
+        count++;
 
         return {
             title: row.Title,
@@ -146,6 +150,7 @@ productRoute.post('/import', verifyToken, async (req, res) => {
         res.status(500).send({ msg: 'Internal server error, try again later' });
     }
 });
+
 
 // Route to export products to Excel
 productRoute.get('/export', verifyToken, async (req, res) => {
