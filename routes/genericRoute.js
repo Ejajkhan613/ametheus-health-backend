@@ -46,6 +46,7 @@ genericRoute.get('/', async (req, res) => {
         // Determine if search term is a valid ObjectId
         const isValidObjectId = mongoose.Types.ObjectId.isValid(req.query.search || '');
         let filters = {};
+        console.log("QUERY",req.query.search);
 
         if (isValidObjectId) {
             filters._id = req.query.search;
@@ -69,6 +70,7 @@ genericRoute.get('/', async (req, res) => {
             .sort(sortOptions)
             .collation({ locale: 'en', strength: 2 })
             .lean();
+            console.log("QUERY",totalPages);
 
         res.status(200).send({
             msg: 'Success',
