@@ -44,12 +44,12 @@ genericRoute.get('/', async (req, res) => {
         const skip = (page - 1) * limit;
 
         // Determine if search term is a valid ObjectId
-        const isValidObjectId = mongoose.Types.ObjectId.isValid(req.query.search || '');
+        const isValidObjectId = mongoose.Types.ObjectId.isValid(req.query.name || '');
         let filters = {};
-        console.log("OBJECTID",isValidObjectId, "ID", req.query.search);
+        console.log("OBJECTID",isValidObjectId, "ID", req.query.name);
 
         if (isValidObjectId) {
-            filters._id = mongoose.Types.ObjectId(req.query.search);
+            filters._id = mongoose.Types.ObjectId(req.query.name);
         } else {
             if (req.query.name) filters.name = new RegExp(req.query.name, 'i');
             if (req.query.slug) filters.slug = new RegExp(req.query.slug, 'i');
