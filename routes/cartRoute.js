@@ -536,7 +536,7 @@ router.get('/', verifyToken, async (req, res) => {
             const product = await ProductModel.findById(item.productID);
             if (product) {
                 const variant = product.variants.id(item.variantID);
-                console.log(variant);
+                console.log(item);
                 if (variant) {
                     item.productDetail = { ...product.toObject() }; // Update product details
                     item.variantDetail = { ...variant.toObject() }; // Update variant details
