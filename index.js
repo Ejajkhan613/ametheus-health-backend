@@ -11,9 +11,9 @@ const bodyParser = require('body-parser');
 const cron = require('node-cron');
 const axios = require('axios');
 
-const passport = require('passport');
-const session = require('express-session');
-require('./config/passport-setup');
+// const passport = require('passport');
+// const session = require('express-session');
+// require('./config/passport-setup');
 
 const ExchangeRate = require('./models/currencyPriceModel');
 
@@ -46,13 +46,13 @@ app.use(bodyParser.json());
 app.use(rateLimiter);
 
 
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'ametheushealth@Ejajul',
-    resave: false,
-    saveUninitialized: true
-}));
-app.use(passport.initialize());
-app.use(passport.session());
+// app.use(session({
+//     secret: process.env.SESSION_SECRET || 'ametheushealth@Ejajul',
+//     resave: false,
+//     saveUninitialized: true
+// }));
+// app.use(passport.initialize());
+// app.use(passport.session());
 
 
 
@@ -64,19 +64,19 @@ app.get('/ah/', async (req, res) => {
 
 
 
-// Routes for Google OAuth
-app.get('/auth/google', passport.authenticate('google', {
-    scope: ['profile', 'email']
-}));
+// // Routes for Google OAuth
+// app.get('/auth/google', passport.authenticate('google', {
+//     scope: ['profile', 'email']
+// }));
 
-app.get('/auth/google/callback', passport.authenticate('google'), (req, res) => {
-    res.redirect('/profile');
-});
+// app.get('/auth/google/callback', passport.authenticate('google'), (req, res) => {
+//     res.redirect('/profile');
+// });
 
-app.get('/logout', (req, res) => {
-    req.logout();
-    res.redirect('/');
-});
+// app.get('/logout', (req, res) => {
+//     req.logout();
+//     res.redirect('/');
+// });
 
 
 
