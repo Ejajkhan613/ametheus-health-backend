@@ -560,6 +560,10 @@ router.get('/', verifyToken, async (req, res) => {
                 itemPrice = item.variantDetail.salePrice !== 0 ? (item.variantDetail.salePrice + (item.variantDetail.salePrice * marginPercentage)) : (item.variantDetail.price + (item.variantDetail.price * marginPercentage));
             }
 
+            console.log("marginPercentage", item.variantDetail.margin / 100)
+            console.log("ItemPrice", item.variantDetail.price)
+            console.log("ItemSalePrice", variantDetail.salePrice)
+            console.log("TOTAL", total + (itemPrice * item.quantity))
             return total + (itemPrice * item.quantity);
         }, 0);
 
