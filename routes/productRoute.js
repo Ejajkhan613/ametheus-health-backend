@@ -817,7 +817,7 @@ productRoute.get('/slug/:slug', async (req, res) => {
 
 productRoute.get('/change/update', async (req, res) => {
     try {
-        const data = await ProductModel.updateMany({}, { isVisible: true });
+        const data = await ProductModel.updateMany({}, { "variant.isStockAvailable": true });
         let count = data.modifiedCount;
         return res.status(200).send({ "msg": "Data Updated", count })
     } catch (error) {
