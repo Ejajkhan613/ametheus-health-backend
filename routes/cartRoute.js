@@ -590,6 +590,7 @@ router.get('/', verifyToken, async (req, res) => {
                 deliveryCharge = 0;
             }
         }
+        console.log("CHARGE",deliverCharge);
 
         // Convert delivery charge to the selected currency
         let deliveryChargeInCurrency = deliveryCharge;
