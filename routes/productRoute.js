@@ -815,4 +815,14 @@ productRoute.get('/slug/:slug', async (req, res) => {
     }
 });
 
+productRoute.get('/change', async (req, res) => {
+    try {
+        const data = await ProductModel.updateMany({}, { isVisible: true });
+        let count = data.modifiedCount;
+        return res.status(200).send({ "msg": "Data Updated", count })
+    } catch (error) {
+        return res.status(404).send({ 'msg': "Error", error })
+    }
+})
+
 module.exports = productRoute;
