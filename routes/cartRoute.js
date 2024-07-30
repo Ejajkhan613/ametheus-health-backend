@@ -180,28 +180,22 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
             // Fetch the product by productID
             const product = await ProductModel.findById(productID);
             if (!product) {
-                errors.push({ productID, variantID, quantity, error: 'Product not found' });
                 continue; // Skip to the next item
             }
 
             // Find the specific variant in the product
             const variant = product.variants.id(variantID);
             if (!variant) {
-                errors.push({ productID, variantID, quantity, error: 'Variant not found' });
                 continue; // Skip to the next item
             }
 
             // Check if the product and variant meet the required conditions
             if (!variant.isStockAvailable || variant.price === 0 || !product.isVisible || product.isDiscontinued) {
-                errors.push({ productID, variantID, quantity, error: 'This Medicine cannot be added due to stock, price, or visibility constraints' });
                 continue; // Skip to the next item
             }
 
-            console.log("YES-WORKING");
-
             // Check if the quantity is within the specified limits
             if (quantity < variant.minOrderQuantity || quantity > variant.maxOrderQuantity) {
-                errors.push({ productID, variantID, quantity, error: `Quantity must be between ${variant.minOrderQuantity} and ${variant.maxOrderQuantity}` });
                 continue; // Skip to the next item
             }
 
