@@ -534,9 +534,9 @@ router.get('/', verifyToken, async (req, res) => {
         // Update cart details with the latest product and variant information
         for (let item of cart.cartDetails) {
             const product = await ProductModel.findById(item.productID);
-            console.log(product);
             if (product) {
                 const variant = product.variants.id(item.variantID);
+                console.log(variant);
                 if (variant) {
                     item.productDetail = { ...product.toObject() }; // Update product details
                     item.variantDetail = { ...variant.toObject() }; // Update variant details
