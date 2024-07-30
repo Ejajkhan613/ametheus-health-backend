@@ -582,7 +582,7 @@ router.get('/', verifyToken, async (req, res) => {
 
             console.log("marginPercentage", item.variantDetail.margin / 100)
             console.log("ItemPrice", item.variantDetail.price)
-            console.log("ItemSalePrice", variantDetail.salePrice)
+            console.log("ItemSalePrice", item.variantDetail.salePrice)
             console.log("TOTAL", total + (itemPrice * item.quantity))
             return total + (itemPrice * item.quantity);
         }, 0);
