@@ -30,7 +30,7 @@ const userRouter = express.Router();
 // Rate limiter
 const Limiter = rateLimit({
     windowMs: 10 * 60 * 1000,
-    max: 5000,
+    max: 20,
     message: "Too many request attempts, please try after 10 minutes."
 });
 
@@ -41,6 +41,21 @@ userRouter.get('/', verifyToken, async (req, res) => {
         const { password, role, __v, referralCode, ...userData } = req.userDetail.toObject();
 
         return res.status(200).send({ msg: 'Success', data: userData });
+    } catch (error) {
+        console.error('Error fetching user details:', error);
+        return res.status(500).send({ msg: 'Internal Server Error, Try Again Later' });
+    }
+});
+
+// Get Admin Account Details
+userRouter.get('/admin', verifyToken, async (req, res) => {
+    try {
+        const { password, role, __v, referralCode, ...userData } = req.userDetail.toObject();
+        if (userData.role !== "admin") {
+            return res.status(400).send({ "msg": "Access Denied" });
+        } else {
+            return res.status(200).send({ msg: 'Success', data: userData });
+        }
     } catch (error) {
         console.error('Error fetching user details:', error);
         return res.status(500).send({ msg: 'Internal Server Error, Try Again Later' });

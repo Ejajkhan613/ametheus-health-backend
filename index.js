@@ -3,13 +3,18 @@ require('dotenv').config();
 const https = require('https');
 const fs = require('fs');
 const express = require('express');
+
 const helmet = require('helmet');
 const cors = require('cors');
 const morgan = require('morgan');
 const bodyParser = require('body-parser');
-
 const cron = require('node-cron');
 const axios = require('axios');
+
+const passport = require('passport');
+const session = require('express-session');
+require('./passport-setup');
+
 const ExchangeRate = require('./models/currencyPriceModel');
 
 const DBConnection = require('./config/db');
@@ -39,12 +44,41 @@ app.use(cors());
 app.use(morgan('combined'));
 app.use(bodyParser.json());
 app.use(rateLimiter);
-// app.use(logger);
+
+
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'ametheushealth@Ejajul',
+    resave: false,
+    saveUninitialized: true
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+
+
+
 
 // Routes
 app.get('/ah/', async (req, res) => {
-    return res.status(300).send({ 'msg': 'Server is Up' });
-})
+    return res.status(200).send({ 'msg': 'Server is Up' });
+});
+
+
+
+// Routes for Google OAuth
+app.get('/auth/google', passport.authenticate('google', {
+    scope: ['profile', 'email']
+}));
+
+app.get('/auth/google/callback', passport.authenticate('google'), (req, res) => {
+    res.redirect('/profile');
+});
+
+app.get('/logout', (req, res) => {
+    req.logout();
+    res.redirect('/');
+});
+
+
 
 // User
 app.use('/ah/api/v1/user', userRouter);
@@ -82,13 +116,13 @@ app.use('/ah/api/v1/currency', currencyRouter);
 
 
 
-// HTTPS Server Configuration
-const privateKey = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/privkey.pem', 'utf8');
-const certificate = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/cert.pem', 'utf8');
-const credentials = { key: privateKey, cert: certificate };
+// // HTTPS Server Configuration
+// const privateKey = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/privkey.pem', 'utf8');
+// const certificate = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/cert.pem', 'utf8');
+// const credentials = { key: privateKey, cert: certificate };
 
-// Starting HTTPS Server
-const httpsServer = https.createServer(credentials, app);
+// // Starting HTTPS Server
+// const httpsServer = https.createServer(credentials, app);
 
 
 const fetchAndUpdateRates = async () => {
@@ -123,7 +157,7 @@ const fetchAndUpdateRates = async () => {
 cron.schedule('0 */6 * * *', fetchAndUpdateRates);
 
 
-httpsServer.listen(Port, async () => {
+app.listen(Port, async () => {
     try {
         await DBConnection;
         console.log(`Connected to DB`);

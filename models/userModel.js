@@ -45,9 +45,12 @@ const userSchema = new mongoose.Schema({
         enum: ["customer", "admin"],
         default: "customer"
     },
-    createdDate: {
-        type: Date,
-        default: Date.now
+    googleId: {
+        type: String
+    },
+    authMethod: {
+        type: String,
+        default: 'simple'
     }
 });
 
