@@ -173,7 +173,6 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
     const userId = req.userDetail._id;
 
     try {
-        const errors = [];
         let cartDetails = [];
 
         // Process each item in the batch
@@ -259,10 +258,7 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
             cartDetails.push(payload);
         }
 
-        // Return errors if any are found
-        if (errors.length > 0) {
-            return res.status(400).json({ errors });
-        }
+        console.log(cartDetails);
 
         // Upsert or update cart details if no errors
         await CartModel.findOneAndUpdate({ userID: userId }, { cartDetails }, { upsert: true, new: true });
