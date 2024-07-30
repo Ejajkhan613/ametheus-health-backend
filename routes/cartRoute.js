@@ -174,6 +174,7 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
 
     try {
         const errors = [];
+        let cartDetails = [];
 
         // Process each item in the batch
         for (const { productID, variantID, quantity } of itemss) {
@@ -253,7 +254,6 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
                     heightUnit: variant.heightUnit,
                 }
             };
-            console.log("PAYLOAD - ", payload);
 
             // Add valid payload to the cartDetails array
             cartDetails.push(payload);
