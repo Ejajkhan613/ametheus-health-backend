@@ -269,11 +269,11 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
                 }
             };
 
+            console.log(payload);
+
             // Add valid payload to the cartDetails array
             cartDetails.push(payload);
         }
-
-        console.log(cartDetails);
 
         // Upsert or update cart details if no errors
         await CartModel.findOneAndUpdate({ userID: userId }, { cartDetails }, { upsert: true, new: true });
@@ -288,8 +288,6 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
         res.status(500).json({ message: 'Error while processing batch request' });
     }
 });
-
-
 
 // Calculate the converted price and salePrice for cart items
 router.post('/', verifyToken, async (req, res) => {
@@ -546,7 +544,7 @@ router.get('/', verifyToken, async (req, res) => {
         }
 
         // Fetch exchange rate for the selected currency if it's not INR
-        let exchangeRate = { rate: 1, symbol: '₹' }; // Default for INR
+        let exchangeRate = { rate: 1, symbol: '₹' };
         if (currency !== 'INR') {
             exchangeRate = await ExchangeRate.findOne({ currency: currency });
             if (!exchangeRate) {
@@ -559,7 +557,7 @@ router.get('/', verifyToken, async (req, res) => {
             const product = await ProductModel.findById(item.productID);
             if (product) {
                 const variant = product.variants.id(item.variantID);
-                console.log(item);
+                console.log("ITEM - ", item);
                 if (variant) {
                     item.productDetail = { ...product.toObject() }; // Update product details
                     item.variantDetail = { ...variant.toObject() }; // Update variant details
