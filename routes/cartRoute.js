@@ -171,6 +171,7 @@ router.post('/batch', async (req, res) => {
 router.post('/batch-loggedin', verifyToken, async (req, res) => {
     const { itemss } = req.body;
     const userId = req.userDetail._id;
+    console.log("YES-WORKING");
 
     try {
         // Process each item in the batch
