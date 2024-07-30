@@ -206,16 +206,13 @@ manufacturerRouter.post('/rmid', verifyToken, async (req, res) => {
     try {
         // Determine the update operation based on the presence of manufacturerID
         const updateData = manufacturerID ? { manufacturerID } : { manufacturerID: "" };
+        console.log(updateData);
 
         // Update the manufacturerID for the provided product IDs
         const result = await ProductModel.updateMany(
             { _id: { $in: products } },
             { $set: updateData }
         );
-
-        if (result.modifiedCount === 0) {
-            return res.status(404).json({ msg: 'No products found with the provided IDs' });
-        }
 
         res.status(200).json({ msg: 'Products updated successfully', modifiedCount: result.modifiedCount });
     } catch (error) {
