@@ -197,8 +197,9 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
                 return { productID, variantID, quantity, error: `Quantity must be between ${variant.minOrderQuantity} and ${variant.maxOrderQuantity}` };
             }
 
+
             // Return cart item details without currency or price conversion
-            return {
+            let payload = {
                 productID,
                 variantID,
                 quantity,
@@ -251,6 +252,8 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
                     heightUnit: variant.heightUnit,
                 }
             };
+            console.log(payload)
+            return payload;
         }));
 
         // Upsert or update cart details
