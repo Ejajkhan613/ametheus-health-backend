@@ -86,7 +86,6 @@ const createOrder = async (totalCartPrice, currency) => {
     });
 };
 
-// Checkout route with file uploads and complete order details
 router.post('/create-order',
     verifyToken,
     [
@@ -105,7 +104,7 @@ router.post('/create-order',
         body('currency').isIn(['INR', 'USD', 'EUR', 'GBP', 'AED', 'RUB']).notEmpty()
     ],
     async (req, res) => {
-        console.log(req.body)
+        console.log(req.body);
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({ errors: errors.array() });
@@ -142,8 +141,25 @@ router.post('/create-order',
             //     passportURL = await uploadFile(req.files['passportImage'][0]);
             // }
 
+            // Convert totalCartPrice to integer (smallest currency sub-unit)
+            let amountInSmallestUnit;
+            switch (currency) {
+                case 'INR':
+                    amountInSmallestUnit = Math.round(parseFloat(totalCartPrice) * 100); // Convert INR to paise
+                    break;
+                case 'USD':
+                case 'EUR':
+                case 'GBP':
+                case 'AED':
+                case 'RUB':
+                    amountInSmallestUnit = Math.round(parseFloat(totalCartPrice) * 100); // Convert to cents/pence/fils/kopecks
+                    break;
+                default:
+                    return res.status(400).send('Unsupported currency');
+            }
+
             // Create Razorpay order
-            const order = await createOrder((totalCartPrice.replace('.', '')), currency);
+            const order = await createOrder(amountInSmallestUnit, currency);
             console.log(order.id);
 
             // Save the order details in the database
@@ -182,7 +198,7 @@ router.post('/create-order',
             res.json({
                 orderId: order.id,
                 currency,
-                amount: totalCartPrice,
+                amount: amountInSmallestUnit, // Send amount in smallest currency sub-unit
                 key_id: process.env.RZPY_KEY_ID_AH
             });
         } catch (error) {
@@ -191,6 +207,7 @@ router.post('/create-order',
         }
     }
 );
+
 
 // Handle payment callback
 router.post('/payment-callback',
