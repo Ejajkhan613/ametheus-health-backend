@@ -815,7 +815,7 @@ productRoute.get('/slug/:slug', async (req, res) => {
     }
 });
 
-productRoute.get('/change', async (req, res) => {
+productRoute.get('/change/update', async (req, res) => {
     try {
         const data = await ProductModel.updateMany({}, { isVisible: true });
         let count = data.modifiedCount;
