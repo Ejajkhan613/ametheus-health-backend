@@ -175,7 +175,6 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
     try {
         // Process each item in the batch
         const cartDetails = await Promise.all(itemss.map(async ({ productID, variantID, quantity }) => {
-            console.log("YES-WORKING");
             // Fetch the product by productID
             const product = await ProductModel.findById(productID);
             if (!product) {
@@ -187,18 +186,19 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
             if (!variant) {
                 return { productID, variantID, quantity, error: 'Variant not found' };
             }
-
+            
             // Check if the product and variant meet the required conditions
             if (!variant.isStockAvailable || variant.price === 0 || !product.isVisible || product.isDiscontinued) {
                 return { productID, variantID, quantity, error: 'This Medicine cannot be added due to stock, price, or visibility constraints' };
             }
-
+            
             // Check if the quantity is within the specified limits
             if (quantity < variant.minOrderQuantity || quantity > variant.maxOrderQuantity) {
                 return { productID, variantID, quantity, error: `Quantity must be between ${variant.minOrderQuantity} and ${variant.maxOrderQuantity}` };
             }
-
-
+            
+            console.log("YES-WORKING");
+            
             // Return cart item details without currency or price conversion
             let payload = {
                 productID,
