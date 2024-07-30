@@ -180,23 +180,38 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
             // Fetch the product by productID
             const product = await ProductModel.findById(productID);
             if (!product) {
-                continue; // Skip to the next item
+                continue;
             }
 
             // Find the specific variant in the product
             const variant = product.variants.id(variantID);
             if (!variant) {
-                continue; // Skip to the next item
+                continue;
             }
 
             // Check if the product and variant meet the required conditions
-            if (!variant.isStockAvailable || variant.price === 0 || !product.isVisible || product.isDiscontinued) {
-                continue; // Skip to the next item
+            if (variant.isStockAvailable == false) {
+                continue;
             }
 
-            // Check if the quantity is within the specified limits
-            if (quantity < variant.minOrderQuantity || quantity > variant.maxOrderQuantity) {
-                continue; // Skip to the next item
+            if (variant.price === 0) {
+                continue;
+            }
+
+            if (product.isVisible === false) {
+                continue;
+            }
+
+            if (product.isDiscontinued === true) {
+                continue;
+            }
+
+            if (quantity < variant.minOrderQuantity) {
+                continue;
+            }
+
+            if (quantity > variant.maxOrderQuantity) {
+                continue;
             }
 
             // Prepare the payload for valid items
