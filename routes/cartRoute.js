@@ -252,7 +252,7 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
                     heightUnit: variant.heightUnit,
                 }
             };
-            console.log(payload)
+            console.log(payload);
             return payload;
         }));
 
