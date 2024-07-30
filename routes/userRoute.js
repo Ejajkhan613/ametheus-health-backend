@@ -51,7 +51,8 @@ userRouter.get('/', verifyToken, async (req, res) => {
 userRouter.get('/admin', verifyToken, async (req, res) => {
     try {
         const { password, role, __v, referralCode, ...userData } = req.userDetail.toObject();
-        if (userData.role !== "admin") {
+        console.log()
+        if (req.userDetail.role !== "admin") {
             return res.status(400).send({ "msg": "Access Denied" });
         } else {
             return res.status(200).send({ msg: 'Success', data: userData });
