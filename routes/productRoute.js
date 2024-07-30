@@ -821,6 +821,7 @@ productRoute.get('/change/update', async (req, res) => {
         let count = data.modifiedCount;
         return res.status(200).send({ "msg": "Data Updated", count })
     } catch (error) {
+        console.log(error);
         return res.status(404).send({ 'msg': "Error", error })
     }
 })
