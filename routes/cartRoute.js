@@ -171,11 +171,11 @@ router.post('/batch', async (req, res) => {
 router.post('/batch-loggedin', verifyToken, async (req, res) => {
     const { itemss } = req.body;
     const userId = req.userDetail._id;
-    console.log("YES-WORKING");
-
+    
     try {
         // Process each item in the batch
         const cartDetails = await Promise.all(itemss.map(async ({ productID, variantID, quantity }) => {
+            console.log("YES-WORKING");
             // Fetch the product by productID
             const product = await ProductModel.findById(productID);
             if (!product) {
