@@ -173,34 +173,39 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
     const userId = req.userDetail._id;
 
     try {
+        const errors = [];
+
         // Process each item in the batch
-        const cartDetails = await Promise.all(itemss.map(async ({ productID, variantID, quantity }) => {
+        for (const { productID, variantID, quantity } of itemss) {
             // Fetch the product by productID
             const product = await ProductModel.findById(productID);
             if (!product) {
-                return { productID, variantID, quantity, error: 'Product not found' };
+                errors.push({ productID, variantID, quantity, error: 'Product not found' });
+                continue; // Skip to the next item
             }
 
             // Find the specific variant in the product
             const variant = product.variants.id(variantID);
             if (!variant) {
-                return { productID, variantID, quantity, error: 'Variant not found' };
+                errors.push({ productID, variantID, quantity, error: 'Variant not found' });
+                continue; // Skip to the next item
             }
 
             // Check if the product and variant meet the required conditions
             if (!variant.isStockAvailable || variant.price === 0 || !product.isVisible || product.isDiscontinued) {
-                return { productID, variantID, quantity, error: 'This Medicine cannot be added due to stock, price, or visibility constraints' };
+                errors.push({ productID, variantID, quantity, error: 'This Medicine cannot be added due to stock, price, or visibility constraints' });
+                continue; // Skip to the next item
             }
 
             console.log("YES-WORKING");
 
             // Check if the quantity is within the specified limits
             if (quantity < variant.minOrderQuantity || quantity > variant.maxOrderQuantity) {
-                return { productID, variantID, quantity, error: `Quantity must be between ${variant.minOrderQuantity} and ${variant.maxOrderQuantity}` };
+                errors.push({ productID, variantID, quantity, error: `Quantity must be between ${variant.minOrderQuantity} and ${variant.maxOrderQuantity}` });
+                continue; // Skip to the next item
             }
 
-
-            // Return cart item details without currency or price conversion
+            // Prepare the payload for valid items
             let payload = {
                 productID,
                 variantID,
@@ -255,15 +260,20 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
                 }
             };
             console.log("PAYLOAD - ", payload);
-            return payload;
-        }));
 
-        console.log(cartDetails)
+            // Add valid payload to the cartDetails array
+            cartDetails.push(payload);
+        }
 
-        // Upsert or update cart details
+        // Return errors if any are found
+        if (errors.length > 0) {
+            return res.status(400).json({ errors });
+        }
+
+        // Upsert or update cart details if no errors
         await CartModel.findOneAndUpdate({ userID: userId }, { cartDetails }, { upsert: true, new: true });
 
-        // Send response
+        // Send success response
         res.status(200).json({
             msg: 'Success'
         });
@@ -273,6 +283,7 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
         res.status(500).json({ message: 'Error while processing batch request' });
     }
 });
+
 
 
 // Calculate the converted price and salePrice for cart items
