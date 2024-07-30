@@ -192,7 +192,7 @@ manufacturerRouter.get('/:id', async (req, res) => {
 });
 
 // Remove or update a manufacturerID of a specific product
-manufacturerRouter.patch('/rmid', verifyToken, async (req, res) => {
+manufacturerRouter.post('/rmid', verifyToken, async (req, res) => {
     if (req.userDetail.role !== "admin") {
         return res.status(400).json({ msg: 'Access Denied' });
     }
