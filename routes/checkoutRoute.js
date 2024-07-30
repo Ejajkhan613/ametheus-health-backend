@@ -145,14 +145,14 @@ router.post('/create-order',
             let amountInSmallestUnit;
             switch (currency) {
                 case 'INR':
-                    amountInSmallestUnit = Math.round(parseFloat(totalCartPrice) * 100); // Convert INR to paise
+                    amountInSmallestUnit = Math.round(parseFloat(+totalCartPrice) * 100); // Convert INR to paise
                     break;
                 case 'USD':
                 case 'EUR':
                 case 'GBP':
                 case 'AED':
                 case 'RUB':
-                    amountInSmallestUnit = Math.round(parseFloat(totalCartPrice) * 100); // Convert to cents/pence/fils/kopecks
+                    amountInSmallestUnit = Math.round(parseFloat(+totalCartPrice) * 100); // Convert to cents/pence/fils/kopecks
                     break;
                 default:
                     return res.status(400).send('Unsupported currency');
