@@ -817,13 +817,18 @@ productRoute.get('/slug/:slug', async (req, res) => {
 
 productRoute.get('/change/update', async (req, res) => {
     try {
-        const data = await ProductModel.updateMany({}, { "variants.isStockAvailable": true });
-        let count = data.modifiedCount;
-        return res.status(200).send({ "msg": "Data Updated", count })
+        // Update all products to set `isStockAvailable` to true in all variants
+        const result = await ProductModel.updateMany(
+            {},
+            { $set: { "variants.$[elem].isStockAvailable": true } },
+            { arrayFilters: [{ "elem.isStockAvailable": { $ne: true } }], multi: true }
+        );
+        let count = result.modifiedCount;
+        return res.status(200).send({ "msg": "Data Updated", count });
     } catch (error) {
-        console.log(error);
-        return res.status(404).send({ 'msg': "Error", error })
+        console.error(error);
+        return res.status(500).send({ 'msg': "Error", error });
     }
-})
+});
 
 module.exports = productRoute;
