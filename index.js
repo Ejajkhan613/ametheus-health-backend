@@ -13,7 +13,7 @@ const axios = require('axios');
 
 const passport = require('passport');
 const session = require('express-session');
-require('./passport-setup');
+require('./config/passport-setup');
 
 const ExchangeRate = require('./models/currencyPriceModel');
 
