@@ -150,7 +150,6 @@ productRoute.post('/import', verifyToken, async (req, res) => {
     }
 });
 
-
 // Route to export products to Excel
 productRoute.get('/export', verifyToken, async (req, res) => {
     try {
@@ -389,7 +388,6 @@ productRoute.delete('/:id/single-image/:imageId', verifyToken, async (req, res) 
     }
 });
 
-
 // Route to delete all images of a product
 productRoute.delete('/:id/images', verifyToken, async (req, res) => {
     if (req.userDetail.role !== "admin") {
@@ -453,7 +451,7 @@ productRoute.get('/search/', async (req, res) => {
     try {
         const { search = '' } = req.query;
 
-        const filters = {};
+        const filters = { isVisible: true };
 
         const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -539,7 +537,7 @@ productRoute.get('/', async (req, res) => {
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
-        const filters = {};
+        const filters = { isVisible: true };
         const {
             search, minPrice, maxPrice, packSize, isVisible,
             sortBy = 'title', order = 'asc', country = 'INDIA', currency = 'INR'
@@ -651,6 +649,9 @@ productRoute.get('/:id', async (req, res) => {
         if (!product) {
             return res.status(404).send({ msg: 'Product not found' });
         }
+        if (product.isVisible == false) {
+            return res.status(404).send({ msg: 'Product not found' });
+        }
 
         // Fetch exchange rate based on user's selected currency
         let exchangeRate = { rate: 1 };
@@ -703,7 +704,7 @@ productRoute.get('/:id', async (req, res) => {
 // Route to fetch products by category ID (currency added)
 productRoute.get('/category/:id', async (req, res) => {
     try {
-        const products = await ProductModel.find({ categoryID: req.params.id }).lean();
+        const products = await ProductModel.find({ categoryID: req.params.id, isVisible: true }).lean();
         if (!products || products.length === 0) {
             return res.status(404).send({ msg: 'No products found for this category' });
         }
@@ -761,7 +762,7 @@ productRoute.get('/category/:id', async (req, res) => {
 // Route to fetch a single product by slug (currency added)
 productRoute.get('/slug/:slug', async (req, res) => {
     try {
-        const product = await ProductModel.findOne({ slug: req.params.slug }).lean();
+        const product = await ProductModel.findOne({ slug: req.params.slug, isVisible: true }).lean();
         if (!product) {
             return res.status(404).send({ msg: 'Product not found' });
         }
