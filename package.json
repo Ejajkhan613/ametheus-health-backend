@@ -33,6 +33,7 @@
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.14",
     "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
     "pdf-lib": "^1.17.1",
     "rate-limiter-flexible": "^5.0.3",
     "razorpay": "^2.9.4",
