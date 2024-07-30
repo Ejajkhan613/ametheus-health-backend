@@ -143,6 +143,7 @@ router.post('/create-order',
 
             // Convert totalCartPrice to integer (smallest currency sub-unit)
             let amountInSmallestUnit;
+            console.log(amountInSmallestUnit);
             switch (currency) {
                 case 'INR':
                     amountInSmallestUnit = Math.round(parseFloat(+totalCartPrice) * 100); // Convert INR to paise
@@ -157,6 +158,8 @@ router.post('/create-order',
                 default:
                     return res.status(400).send('Unsupported currency');
             }
+
+            console.log(amountInSmallestUnit);
 
             // Create Razorpay order
             const order = await createOrder(amountInSmallestUnit, currency);
