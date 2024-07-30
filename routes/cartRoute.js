@@ -269,8 +269,6 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
                 }
             };
 
-            console.log(payload);
-
             // Add valid payload to the cartDetails array
             cartDetails.push(payload);
         }
