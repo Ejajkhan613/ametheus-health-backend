@@ -589,7 +589,9 @@ router.get('/', verifyToken, async (req, res) => {
             } else if (totalPrice >= 16713.65) {
                 deliveryCharge = 0;
             }
-            console.log("CHARGE",deliveryCharge);
+            console.log("CHARGE", deliveryCharge);
+            console.log("COUNTRY", country);
+            console.log("CURRENCY", currency);
         }
 
         // Convert delivery charge to the selected currency
