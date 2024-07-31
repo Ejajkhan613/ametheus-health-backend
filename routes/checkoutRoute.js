@@ -142,26 +142,7 @@ router.post('/create-order',
             // }
 
             // Convert totalCartPrice to integer (smallest currency sub-unit)
-            let amountInSmallestUnit;
-            console.log(amountInSmallestUnit);
-            console.log(totalCartPrice);
-            console.log(+totalCartPrice);
-            switch (currency) {
-                case 'INR':
-                    amountInSmallestUnit = Math.round(parseFloat(+totalCartPrice) * 100); // Convert INR to paise
-                    break;
-                case 'USD':
-                case 'EUR':
-                case 'GBP':
-                case 'AED':
-                case 'RUB':
-                    amountInSmallestUnit = Math.round(parseFloat(+totalCartPrice) * 100); // Convert to cents/pence/fils/kopecks
-                    break;
-                default:
-                    return res.status(400).send('Unsupported currency');
-            }
-
-            console.log(amountInSmallestUnit);
+            
 
             // Create Razorpay order
             const order = await createOrder(+totalCartPrice, currency);
