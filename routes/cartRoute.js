@@ -555,7 +555,6 @@ router.get('/', verifyToken, async (req, res) => {
             const product = await ProductModel.findById(item.productID);
             if (product) {
                 const variant = product.variants.id(item.variantID);
-                console.log("ITEM - ", item);
                 if (variant) {
                     item.productDetail = { ...product.toObject() }; // Update product details
                     item.variantDetail = { ...variant.toObject() }; // Update variant details
@@ -584,6 +583,8 @@ router.get('/', verifyToken, async (req, res) => {
             console.log("ItemPrice", item.variantDetail.price)
             console.log("ItemSalePrice", item.variantDetail.salePrice)
             console.log("TOTAL", total + (itemPrice * item.quantity))
+            console.log("COUNTRY", country)
+            console.log("CURRENCY", currency)
             return total + (itemPrice * item.quantity);
         }, 0);
 
