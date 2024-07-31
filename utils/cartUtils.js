@@ -98,7 +98,8 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
 
             itemPrice = itemPrice;
             return total + (parseFloat(itemPrice) * item.quantity);
-        }, 0).toFixed(2);
+        }, 0);
+        console.log(totalPrice);
 
         // Determine delivery charge based on country
         let deliveryCharge = 0;
