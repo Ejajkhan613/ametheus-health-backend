@@ -17,7 +17,7 @@ const calculateTotalCartPrice = async (userID, country = "INDIA", currency = "IN
         const products = [];
 
         // Fetch exchange rate for the selected currency if it's not INR
-        let exchangeRate = { rate: 1, symbol: '₹', currency: 'INR' }; // Default for INR
+        let exchangeRate = { rate: 1, symbol: '₹' }; // Default for INR
         if (currency !== 'INR') {
             exchangeRate = await ExchangeRate.findOne({ currency: currency });
             if (!exchangeRate) {
@@ -39,43 +39,38 @@ const calculateTotalCartPrice = async (userID, country = "INDIA", currency = "IN
                     // Update product and variant details
                     item.productDetail = { ...product.toObject() }; // Update product details
                     item.variantDetail = { ...variant.toObject() }; // Update variant details
+
+                    // Calculate price based on the provided currency and country
+                    let price = item.variantDetail.price;
+                    let salePrice = item.variantDetail.salePrice || 0;
+
+                    if (country !== "INDIA") {
+                        const marginPercentage = item.variantDetail.margin / 100;
+                        price = (price + (price * marginPercentage)).toFixed(2);
+                        salePrice = (salePrice + (salePrice * marginPercentage)).toFixed(2);
+                    }
+
+                    if (currency !== "INR") {
+                        price = (price * exchangeRate.rate).toFixed(2);
+                        salePrice = (salePrice * exchangeRate.rate).toFixed(2);
+                    }
+
+                    products.push({
+                        productID: product._id,
+                        title: product.title,
+                        images: product.images,
+                        variantID: variant._id,
+                        packSize: variant.packSize,
+                        margin: variant.margin,
+                        quantity: item.quantity,
+                        price: price,
+                        salePrice: salePrice,
+                        currency: exchangeRate.symbol
+                    });
                 } else {
                     // If the variant is not found, remove the item from the cart
                     cart.cartDetails = cart.cartDetails.filter(cartItem => cartItem._id.toString() !== item._id.toString());
                 }
-
-                // Calculate the price and salePrice based on the provided currency and country
-                let convertedPrice = item.variantDetail.price;
-                let convertedSalePrice = item.variantDetail.salePrice;
-                if (country === "INDIA") {
-                    if (currency !== "INR") {
-                        convertedPrice = (item.variantDetail.price * exchangeRate.rate).toFixed(2);
-                        convertedSalePrice = item.variantDetail.salePrice !== 0 ? (item.variantDetail.salePrice * exchangeRate.rate).toFixed(2) : '0.00';
-                    }
-                } else {
-                    // NON-INDIA
-                    const marginPercentage = item.variantDetail.margin / 100;
-                    if (item.variantDetail.salePrice !== 0) {
-                        convertedPrice = ((item.variantDetail.price + (item.variantDetail.price * marginPercentage)) * exchangeRate.rate).toFixed(2);
-                        convertedSalePrice = ((item.variantDetail.salePrice + (item.variantDetail.salePrice * marginPercentage)) * exchangeRate.rate).toFixed(2);
-                    } else {
-                        convertedPrice = ((item.variantDetail.price + (item.variantDetail.price * marginPercentage)) * exchangeRate.rate).toFixed(2);
-                        convertedSalePrice = '0.00';
-                    }
-                }
-
-                products.push({
-                    productID: product._id,
-                    title: product.title,
-                    images: product.images,
-                    variantID: variant._id,
-                    packSize: variant.packSize,
-                    margin: variant.margin,
-                    quantity: item.quantity,
-                    price: convertedPrice,
-                    salePrice: convertedSalePrice,
-                    currency: exchangeRate.symbol
-                });
             } else {
                 // If the product is not found, remove the item from the cart
                 cart.cartDetails = cart.cartDetails.filter(cartItem => cartItem._id.toString() !== item._id.toString());
@@ -85,20 +80,12 @@ const calculateTotalCartPrice = async (userID, country = "INDIA", currency = "IN
         // Calculate the total price of the cart
         let totalPrice = cart.cartDetails.reduce((total, item) => {
             let itemPrice;
-            if (country === "INDIA") {
-                if (currency !== "INR") {
-                    itemPrice = item.variantDetail.salePrice !== 0 ? (item.variantDetail.salePrice * exchangeRate.rate).toFixed(2) : (item.variantDetail.price * exchangeRate.rate).toFixed(2);
-                } else {
-                    itemPrice = item.variantDetail.salePrice !== 0 ? item.variantDetail.salePrice.toFixed(2) : item.variantDetail.price.toFixed(2);
-                }
+            if (currency !== "INR") {
+                itemPrice = item.variantDetail.salePrice || item.variantDetail.price;
+                itemPrice = (itemPrice * exchangeRate.rate).toFixed(2);
             } else {
-                // NON-INDIA
-                const marginPercentage = item.variantDetail.margin / 100;
-                if (currency !== "INR") {
-                    itemPrice = item.variantDetail.salePrice !== 0 ? ((item.variantDetail.salePrice + (item.variantDetail.salePrice * marginPercentage)) * exchangeRate.rate).toFixed(2) : ((item.variantDetail.price + (item.variantDetail.price * marginPercentage)) * exchangeRate.rate).toFixed(2);
-                } else {
-                    itemPrice = item.variantDetail.salePrice !== 0 ? ((item.variantDetail.salePrice + (item.variantDetail.salePrice * marginPercentage))).toFixed(2) : ((item.variantDetail.price + (item.variantDetail.price * marginPercentage))).toFixed(2);
-                }
+                itemPrice = item.variantDetail.salePrice || item.variantDetail.price;
+                itemPrice = itemPrice.toFixed(2);
             }
 
             return total + (parseFloat(itemPrice) * item.quantity);
