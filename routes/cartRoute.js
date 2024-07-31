@@ -540,17 +540,12 @@ router.get('/', verifyToken, async (req, res) => {
         if (!cart) {
             return res.status(404).json({ message: 'Cart not found' });
         }
-        console.log("COUNTRY", country)
-        console.log("COUNTRY-BOOL", typeof(country))
 
-        if (!country) {
+        if (country == "null" || country == "undefined" || country == null || country == undefined) {
             country = 'INDIA';
-            console.log("COUNTRY-CHANGED", country)
         }
 
-        console.log("COUNTRY", country)
-
-        if (!currency) {
+        if (currency == "null" || currency == "undefined" || currency == null || currency == undefined) {
             currency = 'INR';
         }
 
