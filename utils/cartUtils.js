@@ -87,15 +87,15 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
         }
 
         // Calculate the total price of the cart
-        let totalPrice = products.reduce((total, item) => {
-            console.log("ITEM-SalePrice", +item.salePrice)
-            console.log("ITEM-Price", +item.price)
+        let totalPrice = cart.cartDetails.reduce((total, item) => {
+            console.log("ITEM-SalePrice", +item.variantDetail.salePrice)
+            console.log("ITEM-Price", +item.variantDetail.price)
             let itemPrice;
             if (currency !== "INR") {
-                itemPrice = +(item.salePrice) || +(item.price);
-                itemPrice = itemPrice * exchangeRate.rate;
+                itemPrice = +(item.variantDetail.salePrice) || +(item.variantDetail.price);
+                itemPrice = itemPrice;
             } else {
-                itemPrice = +(item.salePrice) || +(item.price);
+                itemPrice = +(item.variantDetail.salePrice) || +(item.variantDetail.price);
             }
 
             itemPrice = itemPrice;
