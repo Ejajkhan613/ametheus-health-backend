@@ -530,7 +530,7 @@ router.post('/', verifyToken, async (req, res) => {
 
 // Get all cart details with prices
 router.get('/', verifyToken, async (req, res) => {
-    const { country, currency } = req.query;
+    let { country, currency } = req.query;
 
     try {
         // Find the user's cart
