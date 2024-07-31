@@ -141,15 +141,22 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
             }
         }
 
+        console.log("totalPriceInINR", totalPriceInINR)
+        console.log("deliveryChargeInINR", deliveryChargeInINR)
+
         // Convert delivery charge to the selected currency
         let deliveryChargeInCurrency = deliveryChargeInINR;
         if (currency !== 'INR') {
             deliveryChargeInCurrency = deliveryChargeInINR * exchangeRate.rate;
         }
-
+        console.log("deliveryChargeInCurrency", deliveryChargeInCurrency)
+        
         // Calculate total cart price in selected currency
         const totalCartPrice = (parseFloat(totalPriceInINR) + parseFloat(deliveryChargeInINR)).toFixed(2);
         const totalCartPriceInCurrency = (parseFloat(totalCartPrice) * exchangeRate.rate).toFixed(2);
+        
+        console.log("totalCartPrice", totalCartPrice)
+        console.log("totalCartPriceInCurrency", totalCartPriceInCurrency)
 
         // Convert numbers to strings with two decimal places
         let totalPrice = parseFloat(parseFloat(totalPriceInINR) * exchangeRate.rate).toFixed(2);
