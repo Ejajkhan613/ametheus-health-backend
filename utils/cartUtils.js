@@ -88,8 +88,6 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
 
         // Calculate the total price of the cart
         let totalPrice = cart.cartDetails.reduce((total, item) => {
-            console.log("ITEM-SalePrice", +item.variantDetail.salePrice)
-            console.log("ITEM-Price", +item.variantDetail.price)
             let itemPrice;
             if (currency !== "INR") {
                 itemPrice = +(item.variantDetail.salePrice) || +(item.variantDetail.price);
@@ -99,7 +97,6 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
             }
 
             itemPrice = itemPrice;
-            console.log("ITEM-DETAILS", itemPrice)
             return total + (parseFloat(itemPrice) * item.quantity);
         }, 0).toFixed(2);
 
@@ -133,7 +130,7 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
         const totalCartPrice = (parseFloat(totalPrice) + parseFloat(deliveryChargeInCurrency)).toFixed(2);
 
         // Convert numbers to strings with two decimal places
-        totalPrice = parseFloat(totalPrice).toFixed(2);
+        totalPrice = parseFloat(totalPrice * exchangeRate.rate).toFixed(2);
         deliveryChargeInCurrency = parseFloat(deliveryChargeInCurrency).toFixed(2);
 
         // Return the results
