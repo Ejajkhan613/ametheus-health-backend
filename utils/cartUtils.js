@@ -88,7 +88,7 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
 
         // Calculate the total price of the cart
         let totalPrice = products.reduce((total, item) => {
-            console.log(item)
+            console.log("ITEM-DETAILS",item)
             let itemPrice;
             if (currency !== "INR") {
                 itemPrice = item.salePrice || item.price;
@@ -97,7 +97,8 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
                 itemPrice = item.salePrice || item.price;
             }
 
-            return total + (parseFloat(+itemPrice) * item.quantity);
+            itemPrice = +itemPrice;
+            return total + (parseFloat(itemPrice) * item.quantity);
         }, 0).toFixed(2);
 
         // Determine delivery charge based on country
