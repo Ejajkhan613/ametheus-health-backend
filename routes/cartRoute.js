@@ -533,13 +533,7 @@ router.get('/', verifyToken, async (req, res) => {
     let { country, currency } = req.query;
 
     try {
-        // Find the user's cart
-        const cart = await CartModel.findOne({ userID: req.userDetail._id });
 
-        // Check if the cart is found
-        if (!cart) {
-            return res.status(404).json({ message: 'Cart not found' });
-        }
 
         if (country == "null" || country == "undefined" || country == null || country == undefined) {
             country = 'INDIA';
@@ -557,6 +551,23 @@ router.get('/', verifyToken, async (req, res) => {
                 return res.status(404).json({ message: 'Exchange rate not found for the selected currency' });
             }
         }
+
+        // Find the user's cart
+        const cart = await CartModel.findOne({ userID: req.userDetail._id });
+        if (!cart) return res.status(200).json({
+            message: "Cart is Empty",
+            cart: {
+                "userID": "66a72535debeabdee6646f1f",
+                "cartDetails": [],
+                "totalPrice": "00.00",
+                "deliveryCharge": "00.00",
+                "totalCartPrice": "00.00",
+                "currency": exchangeRate.symbol,
+                "currencyCode": currency,
+                country
+            }
+        });
+
 
         // Update cart details with the latest product and variant information
         for (let item of cart.cartDetails) {
@@ -613,7 +624,7 @@ router.get('/', verifyToken, async (req, res) => {
         // Convert delivery charge to the selected currency
         let deliveryChargeInCurrency = deliveryChargeInINR;
         if (currency !== 'INR') {
-            deliveryChargeInCurrency = (deliveryChargeInINR * exchangeRate.rate).toFixed(2);
+            deliveryChargeInCurrency = deliveryChargeInINR * exchangeRate.rate;
         }
 
         // Calculate total cart price in selected currency
@@ -625,6 +636,8 @@ router.get('/', verifyToken, async (req, res) => {
         // Convert numbers to strings with two decimal places
         let totalPrice = parseFloat(parseFloat(totalPriceInINR) * exchangeRate.rate).toFixed(2);
         deliveryChargeInCurrency = parseFloat(deliveryChargeInCurrency).toFixed(2);
+
+        console.log(deliveryChargeInCurrency, deliveryChargeInINR);
 
         // Update cart details with converted prices and currency symbol
         cart.cartDetails = cart.cartDetails.map(item => {
@@ -661,7 +674,7 @@ router.get('/', verifyToken, async (req, res) => {
 
         // Send the response with calculated prices and currency
         res.status(200).json({
-            message: 'Cart retrieved successfully',
+            message: 'Cart Fetched successfully',
             cart: {
                 ...cart.toObject(),
                 totalPrice: totalPrice.toString(),
@@ -683,12 +696,20 @@ router.get('/', verifyToken, async (req, res) => {
 // Delete specific product and its variant from cart
 router.delete('/remove', verifyToken, async (req, res) => {
     const { productID, variantID } = req.body;
-    const { country = 'INDIA', currency = 'INR' } = req.query;
+    const { country, currency } = req.query;
 
     try {
         // Find the user's cart
         const cart = await CartModel.findOne({ userID: req.userDetail._id });
         if (!cart) return res.status(404).json({ message: 'Cart not found' });
+
+        if (country == "null" || country == "undefined" || country == null || country == undefined) {
+            country = 'INDIA';
+        }
+
+        if (currency == "null" || currency == "undefined" || currency == null || currency == undefined) {
+            currency = 'INR';
+        }
 
         // Find and remove the item from the cart
         const itemIndex = cart.cartDetails.findIndex(item =>
@@ -704,6 +725,7 @@ router.delete('/remove', verifyToken, async (req, res) => {
             if (product) {
                 const variant = product.variants.id(item.variantID);
                 if (variant) {
+                    console.log(item);
                     return {
                         ...item.toObject(),
                         productDetail: product.toObject(),
