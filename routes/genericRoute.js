@@ -113,7 +113,7 @@ genericRoute.get('/names', verifyToken, async (req, res) => {
 });
 
 // Route to update or clear genericID for a list of products
-categoryRoute.post('/rmid', verifyToken, async (req, res) => {
+genericRoute.post('/rmid', verifyToken, async (req, res) => {
     if (req.userDetail.role !== "admin") {
         return res.status(400).json({ msg: 'Access Denied' });
     }
