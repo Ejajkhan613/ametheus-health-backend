@@ -540,10 +540,13 @@ router.get('/', verifyToken, async (req, res) => {
         if (!cart) {
             return res.status(404).json({ message: 'Cart not found' });
         }
+        console.log("COUNTRY", country)
 
         if (!country) {
             country = 'INDIA';
         }
+
+        console.log("COUNTRY", country)
 
         if (!currency) {
             currency = 'INR';
@@ -630,8 +633,10 @@ router.get('/', verifyToken, async (req, res) => {
         const totalCartPrice = (parseFloat(totalPriceInINR) + parseFloat(deliveryChargeInINR)).toFixed(2);
         const totalCartPriceInCurrency = (parseFloat(totalCartPrice) * exchangeRate.rate).toFixed(2);
 
+
+
         // Convert numbers to strings with two decimal places
-        let totalPrice = parseFloat(totalPriceInINR).toFixed(2);
+        let totalPrice = parseFloat(parseFloat(totalPriceInINR) * exchangeRate.rate).toFixed(2);
         deliveryChargeInCurrency = parseFloat(deliveryChargeInCurrency).toFixed(2);
 
         // Update cart details with converted prices and currency symbol
