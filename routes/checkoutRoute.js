@@ -144,6 +144,8 @@ router.post('/create-order',
             // Convert totalCartPrice to integer (smallest currency sub-unit)
             let amountInSmallestUnit;
             console.log(amountInSmallestUnit);
+            console.log(totalCartPrice);
+            console.log(+totalCartPrice);
             switch (currency) {
                 case 'INR':
                     amountInSmallestUnit = Math.round(parseFloat(+totalCartPrice) * 100); // Convert INR to paise

@@ -631,13 +631,9 @@ router.get('/', verifyToken, async (req, res) => {
         const totalCartPrice = (parseFloat(totalPriceInINR) + parseFloat(deliveryChargeInINR)).toFixed(2);
         const totalCartPriceInCurrency = (parseFloat(totalCartPrice) * exchangeRate.rate).toFixed(2);
 
-
-
         // Convert numbers to strings with two decimal places
         let totalPrice = parseFloat(parseFloat(totalPriceInINR) * exchangeRate.rate).toFixed(2);
         deliveryChargeInCurrency = parseFloat(deliveryChargeInCurrency).toFixed(2);
-
-        console.log(deliveryChargeInCurrency, deliveryChargeInINR);
 
         // Update cart details with converted prices and currency symbol
         cart.cartDetails = cart.cartDetails.map(item => {
@@ -692,24 +688,24 @@ router.get('/', verifyToken, async (req, res) => {
     }
 });
 
-
 // Delete specific product and its variant from cart
 router.delete('/remove', verifyToken, async (req, res) => {
     const { productID, variantID } = req.body;
-    const { country, currency } = req.query;
+    let { country, currency } = req.body;
 
     try {
-        // Find the user's cart
-        const cart = await CartModel.findOne({ userID: req.userDetail._id });
-        if (!cart) return res.status(404).json({ message: 'Cart not found' });
-
-        if (country == "null" || country == "undefined" || country == null || country == undefined) {
+        // Validate and set default values for country and currency
+        if (country === "null" || country === "undefined" || country == null || country === undefined) {
             country = 'INDIA';
         }
 
-        if (currency == "null" || currency == "undefined" || currency == null || currency == undefined) {
+        if (currency === "null" || currency === "undefined" || currency == null || currency === undefined) {
             currency = 'INR';
         }
+
+        // Find the user's cart
+        const cart = await CartModel.findOne({ userID: req.userDetail._id });
+        if (!cart) return res.status(404).json({ message: 'Cart not found' });
 
         // Find and remove the item from the cart
         const itemIndex = cart.cartDetails.findIndex(item =>
@@ -725,7 +721,6 @@ router.delete('/remove', verifyToken, async (req, res) => {
             if (product) {
                 const variant = product.variants.id(item.variantID);
                 if (variant) {
-                    console.log(item);
                     return {
                         ...item.toObject(),
                         productDetail: product.toObject(),
@@ -733,59 +728,68 @@ router.delete('/remove', verifyToken, async (req, res) => {
                     };
                 }
             }
-            return null; // Filter out any invalid items
+            return null; // Filtering out any invalid items
         }));
 
         // Remove any null items from cartDetails
         cart.cartDetails = cart.cartDetails.filter(item => item !== null);
 
-        // Save the updated cart
-        await cart.save();
-
-        // Calculate the total price of the cart
-        let totalPrice = cart.cartDetails.reduce((total, item) => {
+        // Calculate the total price of the cart in INR
+        let totalPriceInINR = cart.cartDetails.reduce((total, item) => {
             let itemPrice;
             if (country === 'INDIA') {
                 itemPrice = item.variantDetail.salePrice !== 0 ? item.variantDetail.salePrice : item.variantDetail.price;
             } else {
+                const marginPercentage = item.variantDetail.margin / 100;
                 itemPrice = item.variantDetail.salePrice !== 0 ?
-                    (item.variantDetail.salePrice + (item.variantDetail.salePrice * item.variantDetail.margin / 100)) :
-                    (item.variantDetail.price + (item.variantDetail.price * item.variantDetail.margin / 100));
+                    (item.variantDetail.salePrice + (item.variantDetail.salePrice * marginPercentage)) :
+                    (item.variantDetail.price + (item.variantDetail.price * marginPercentage));
             }
-            return total + itemPrice * item.quantity;
+            return total + (itemPrice * item.quantity);
         }, 0);
 
-        // Determine delivery charge based on country
-        let deliveryCharge = 0;
+        // Determine delivery charge based on total price in INR
+        let deliveryChargeInINR = 0;
         if (country === 'INDIA') {
-            if (totalPrice > 0 && totalPrice < 500) deliveryCharge = 99;
-            else if (totalPrice >= 500 && totalPrice < 1000) deliveryCharge = 59;
-            else if (totalPrice >= 1000) deliveryCharge = 0;
+            if (totalPriceInINR > 0 && totalPriceInINR < 500) {
+                deliveryChargeInINR = 99;
+            } else if (totalPriceInINR >= 500 && totalPriceInINR < 1000) {
+                deliveryChargeInINR = 59;
+            } else if (totalPriceInINR >= 1000) {
+                deliveryChargeInINR = 0;
+            }
         } else {
-            if (totalPrice > 0 && totalPrice < 4177.78) deliveryCharge = 4178.62;
-            else if (totalPrice >= 4177.78 && totalPrice < 16713.64) deliveryCharge = 3342.90;
-            else if (totalPrice >= 16713.65) deliveryCharge = 0;
+            if (totalPriceInINR > 0 && totalPriceInINR < 4177.78) {
+                deliveryChargeInINR = 4178.62;
+            } else if (totalPriceInINR >= 4177.78 && totalPriceInINR < 16713.64) {
+                deliveryChargeInINR = 3342.90;
+            } else if (totalPriceInINR >= 16713.65) {
+                deliveryChargeInINR = 0;
+            }
         }
 
-        // Convert totalPrice and deliveryCharge to the selected currency
-        let totalPriceInCurrency = totalPrice;
-        let deliveryChargeInCurrency = deliveryCharge;
+        // Convert delivery charge to the selected currency
+        let deliveryChargeInCurrency = deliveryChargeInINR;
         let symbol = '₹';
 
         if (currency !== 'INR') {
             const exchangeRate = await ExchangeRate.findOne({ currency: currency });
             if (!exchangeRate) return res.status(404).json({ message: 'Exchange rate not found for the selected currency' });
 
-            totalPriceInCurrency = (totalPrice * exchangeRate.rate).toFixed(2);
-            deliveryChargeInCurrency = (deliveryCharge * exchangeRate.rate).toFixed(2);
+            deliveryChargeInCurrency = deliveryChargeInINR * exchangeRate.rate;
             symbol = exchangeRate.currency === 'AED' ? exchangeRate.currency : exchangeRate.symbol;
         }
 
-        const totalCartPrice = (parseFloat(totalPriceInCurrency) + parseFloat(deliveryChargeInCurrency)).toFixed(2);
+        // Calculate total cart price in selected currency
+        const totalCartPrice = (parseFloat(totalPriceInINR) + parseFloat(deliveryChargeInINR)).toFixed(2);
+        const totalCartPriceInCurrency = (parseFloat(totalCartPrice) * (currency === 'INR' ? 1 : exchangeRate.rate)).toFixed(2);
 
         // Convert numbers to strings with two decimal places
-        totalPriceInCurrency = parseFloat(totalPriceInCurrency).toFixed(2);
+        const totalPriceInCurrency = parseFloat(totalPriceInINR * (currency === 'INR' ? 1 : exchangeRate.rate)).toFixed(2);
         deliveryChargeInCurrency = parseFloat(deliveryChargeInCurrency).toFixed(2);
+
+        // Save the updated cart
+        await cart.save();
 
         // Send the response with the updated cart and calculated prices
         res.status(200).json({
@@ -794,8 +798,9 @@ router.delete('/remove', verifyToken, async (req, res) => {
                 ...cart.toObject(),
                 totalPrice: totalPriceInCurrency.toString(),
                 deliveryCharge: deliveryChargeInCurrency.toString(),
-                totalCartPrice: totalCartPrice.toString(),
-                currency: symbol
+                totalCartPrice: totalCartPriceInCurrency.toString(),
+                currency: symbol,
+                country
             }
         });
 
@@ -804,6 +809,7 @@ router.delete('/remove', verifyToken, async (req, res) => {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
+
 
 // Delete all the cart
 router.delete('/', verifyToken, async (req, res) => {
