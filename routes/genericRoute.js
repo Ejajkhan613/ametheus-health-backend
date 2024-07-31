@@ -46,7 +46,7 @@ genericRoute.get('/', async (req, res) => {
         // Determine if search term is a valid ObjectId
         const isValidObjectId = mongoose.Types.ObjectId.isValid(req.query.search || '');
         let filters = {};
-        console.log("QUERY",req.query.search);
+        console.log("QUERY", req.query.search);
 
         if (isValidObjectId) {
             filters._id = req.query.search;
@@ -70,7 +70,7 @@ genericRoute.get('/', async (req, res) => {
             .sort(sortOptions)
             .collation({ locale: 'en', strength: 2 })
             .lean();
-            console.log("QUERY",generics);
+        console.log("QUERY", generics);
 
         res.status(200).send({
             msg: 'Success',
@@ -112,6 +112,34 @@ genericRoute.get('/names', verifyToken, async (req, res) => {
     }
 });
 
+// Route to update or clear genericID for a list of products
+categoryRoute.post('/rmid', verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).json({ msg: 'Access Denied' });
+    }
+
+    const { products, genericID } = req.body;
+
+    if (!products || !Array.isArray(products) || products.length === 0) {
+        return res.status(400).json({ msg: 'Product IDs are required' });
+    }
+
+    try {
+        // Determine the update operation based on the presence of genericID
+        const updateData = genericID ? { genericID } : { genericID: "" };
+
+        // Update the genericID for the provided product IDs
+        const result = await ProductModel.updateMany(
+            { _id: { $in: products } },
+            { $set: updateData }
+        );
+
+        res.status(200).json({ msg: 'Products updated successfully', count: result.modifiedCount });
+    } catch (error) {
+        console.error('Error updating genericID:', error);
+        res.status(500).json({ msg: 'Internal server error, try again later' });
+    }
+});
 
 // GET a generic by ID (with all products who have the same genericID)
 genericRoute.get('/:id', async (req, res) => {
