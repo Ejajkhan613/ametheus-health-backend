@@ -91,6 +91,14 @@ const orderSchema = new mongoose.Schema({
       type: String,
       default: ""
     },
+    price: {
+      type: String,
+      default: ""
+    },
+    salePrice: {
+      type: String,
+      default: ""
+    },
     margin: {
       type: Number,
       default: 0

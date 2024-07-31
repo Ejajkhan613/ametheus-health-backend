@@ -50,11 +50,11 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
                     item.variantDetail = { ...variant.toObject() }; // Update variant details
 
                     // Calculate price based on the provided currency and country
-                    let price = item.variantDetail.price;
-                    let salePrice = item.variantDetail.salePrice || 0;
+                    let price = variant.price;
+                    let salePrice = variant.salePrice || 0;
 
                     if (country !== "INDIA") {
-                        const marginPercentage = item.variantDetail.margin / 100;
+                        const marginPercentage = variant.margin / 100;
                         price = price + (price * marginPercentage);
                         salePrice = salePrice + (salePrice * marginPercentage);
                     }
