@@ -142,7 +142,6 @@ router.post('/create-order',
             // }
 
             // Convert totalCartPrice to integer (smallest currency sub-unit)
-            
 
             // Create Razorpay order
             const order = await createOrder(+totalCartPrice, currency);
@@ -184,7 +183,7 @@ router.post('/create-order',
             res.json({
                 orderId: order.id,
                 currency,
-                amount: amountInSmallestUnit, // Send amount in smallest currency sub-unit
+                amount: totalCartPrice, // Send amount in smallest currency sub-unit
                 key_id: process.env.RZPY_KEY_ID_AH
             });
         } catch (error) {
