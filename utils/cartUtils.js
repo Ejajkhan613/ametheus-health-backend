@@ -127,7 +127,8 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
         }
 
         // Calculate total cart price
-        const totalCartPrice = (parseFloat(totalPrice) + parseFloat(deliveryChargeInCurrency)).toFixed(2);
+        let totalCartPrice = (parseFloat(totalPrice) + parseFloat(deliveryChargeInCurrency));
+        totalCartPrice = (totalCartPrice * exchangeRate.rate).toFixed(2);
 
         // Convert numbers to strings with two decimal places
         totalPrice = parseFloat(totalPrice * exchangeRate.rate).toFixed(2);
