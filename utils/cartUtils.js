@@ -91,10 +91,10 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
             console.log("ITEM-DETAILS", item)
             let itemPrice;
             if (currency !== "INR") {
-                itemPrice = item.salePrice || item.price;
+                itemPrice = +(item.salePrice) || +(item.price);
                 itemPrice = itemPrice * exchangeRate.rate;
             } else {
-                itemPrice = item.salePrice || item.price;
+                itemPrice = +(item.salePrice) || +(item.price);
             }
 
             itemPrice = +itemPrice;
