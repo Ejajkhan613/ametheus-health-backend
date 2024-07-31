@@ -98,7 +98,7 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
                 itemPrice = +(item.salePrice) || +(item.price);
             }
 
-            itemPrice = +itemPrice;
+            itemPrice = itemPrice;
             console.log("ITEM-DETAILS", itemPrice)
             return total + (parseFloat(itemPrice) * item.quantity);
         }, 0).toFixed(2);
