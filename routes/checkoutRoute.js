@@ -179,6 +179,8 @@ router.post('/create-order',
 
             await newOrder.save();
 
+            console.log(totalCartPrice);
+
             // Respond with order details
             res.json({
                 orderId: order.id,
