@@ -541,7 +541,7 @@ router.get('/', verifyToken, async (req, res) => {
             return res.status(404).json({ message: 'Cart not found' });
         }
         console.log("COUNTRY", country)
-        console.log("COUNTRY-BOOL", !country)
+        console.log("COUNTRY-BOOL", typeof(country))
 
         if (!country) {
             country = 'INDIA';
