@@ -590,15 +590,16 @@ router.get('/', verifyToken, async (req, res) => {
         // Calculate the total price of the cart in INR
         let totalPriceInINR = cart.cartDetails.reduce((total, item) => {
             let itemPrice;
-            if (country === "INDIA") {
-                itemPrice = item.variantDetail.salePrice !== 0 ? item.variantDetail.salePrice : item.variantDetail.price;
+            if (currency !== "INR") {
+                itemPrice = +(item.variantDetail.salePrice) || +(item.variantDetail.price);
+                itemPrice = itemPrice;
             } else {
-                // NON-INDIA
-                const marginPercentage = item.variantDetail.margin / 100;
-                itemPrice = item.variantDetail.salePrice !== 0 ? (item.variantDetail.salePrice + (item.variantDetail.salePrice * marginPercentage)) : (item.variantDetail.price + (item.variantDetail.price * marginPercentage));
+                itemPrice = +(item.variantDetail.salePrice) || +(item.variantDetail.price);
             }
 
-            return total + (itemPrice * item.quantity);
+            itemPrice = itemPrice;
+            console.log(itemPrice);
+            return total + (parseFloat(itemPrice) * item.quantity);
         }, 0);
 
         // Determine delivery charge based on total price in INR
