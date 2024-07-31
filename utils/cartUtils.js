@@ -90,8 +90,8 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
         let totalPriceInINR = cart.cartDetails.reduce((total, item) => {
             let itemPrice;
             if (currency !== "INR") {
-                itemPrice = +(item.variantDetail.salePrice) || +(item.variantDetail.price);
-                itemPrice = itemPrice;
+                const marginPercentage = variant.margin / 100;
+                itemPrice = +(item.variantDetail.salePrice * marginPercentage) || +(item.variantDetail.price * marginPercentage);
             } else {
                 itemPrice = +(item.variantDetail.salePrice) || +(item.variantDetail.price);
             }
@@ -100,26 +100,6 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
             console.log(itemPrice);
             return total + (parseFloat(itemPrice) * item.quantity);
         }, 0);
-
-        // Determine delivery charge based on country
-        let deliveryCharge = 0;
-        if (country === 'INDIA') {
-            if (totalPriceInINR > 0 && totalPriceInINR < 500) {
-                deliveryCharge = 99;
-            } else if (totalPriceInINR >= 500 && totalPriceInINR < 1000) {
-                deliveryCharge = 59;
-            } else if (totalPriceInINR >= 1000) {
-                deliveryCharge = 0;
-            }
-        } else {
-            if (totalPriceInINR > 0 && totalPriceInINR < 4177.78) {
-                deliveryCharge = 4178.62;
-            } else if (totalPriceInINR >= 4177.78 && totalPriceInINR < 16713.64) {
-                deliveryCharge = 3342.90;
-            } else if (totalPriceInINR >= 16713.65) {
-                deliveryCharge = 0;
-            }
-        }
 
         // Determine delivery charge based on total price in INR
         let deliveryChargeInINR = 0;
@@ -150,11 +130,11 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
             deliveryChargeInCurrency = deliveryChargeInINR * exchangeRate.rate;
         }
         console.log("deliveryChargeInCurrency", deliveryChargeInCurrency)
-        
+
         // Calculate total cart price in selected currency
         const totalCartPrice = (parseFloat(totalPriceInINR) + parseFloat(deliveryChargeInINR)).toFixed(2);
         const totalCartPriceInCurrency = (parseFloat(totalCartPrice) * exchangeRate.rate).toFixed(2);
-        
+
         console.log("totalCartPrice", totalCartPrice)
         console.log("totalCartPriceInCurrency", totalCartPriceInCurrency)
 
