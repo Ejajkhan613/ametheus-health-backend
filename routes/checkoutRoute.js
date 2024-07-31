@@ -240,7 +240,7 @@ router.post('/payment-callback',
             if (order) {
                 order.payment.paymentId = payment_id;
                 order.payment.signature = signature;
-                order.status = 'Completed';
+                order.status = 'Accepted';
                 await order.save();
             }
 
