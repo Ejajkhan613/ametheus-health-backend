@@ -55,6 +55,10 @@ function isValidObjectId(id) {
 
 // Route to upload Excel file and create products
 productRoute.post('/import', verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).send({ msg: 'Access Denied' });
+    }
+
     if (!req.files || !req.files.file) {
         return res.status(400).send({ msg: 'No file uploaded' });
     }
@@ -152,6 +156,10 @@ productRoute.post('/import', verifyToken, async (req, res) => {
 
 // Route to export products to Excel
 productRoute.get('/export', verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).send({ msg: 'Access Denied' });
+    }
+
     try {
         const { categoryID, genericID, manufacturerID, originCountry } = req.query;
 
@@ -542,8 +550,6 @@ productRoute.get('/', async (req, res) => {
             search, minPrice, maxPrice, packSize, isVisible,
             sortBy = 'title', order = 'asc', country = 'INDIA', currency = 'INR'
         } = req.query;
-
-        console.log(search);
 
         const regex = new RegExp(search, 'i');
 

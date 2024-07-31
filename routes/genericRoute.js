@@ -51,8 +51,15 @@ genericRoute.get('/', async (req, res) => {
         if (isValidObjectId) {
             filters._id = req.query.search;
         } else {
-            if (req.query.search) filters.name = new RegExp(req.query.search, 'i');
-            if (req.query.search) filters.slug = new RegExp(req.query.search, 'i');
+            if (req.query.search) {
+                const searchTerm = req.query.search.trim();
+                const regex = new RegExp(searchTerm, 'i');
+
+                filters.$or = [
+                    { name: regex },
+                    { slug: regex }
+                ];
+            }
         }
 
         const sortOptions = {};
