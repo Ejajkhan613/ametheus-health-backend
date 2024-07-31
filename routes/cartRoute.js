@@ -541,6 +541,7 @@ router.get('/', verifyToken, async (req, res) => {
             return res.status(404).json({ message: 'Cart not found' });
         }
         console.log("COUNTRY", country)
+        console.log("COUNTRY-BOOL", !country)
 
         if (!country) {
             country = 'INDIA';
@@ -614,15 +615,11 @@ router.get('/', verifyToken, async (req, res) => {
             }
         }
 
-        console.log("DELIVERYCHARGEININR - ", deliveryChargeInINR);
-
         // Convert delivery charge to the selected currency
         let deliveryChargeInCurrency = deliveryChargeInINR;
         if (currency !== 'INR') {
             deliveryChargeInCurrency = (deliveryChargeInINR * exchangeRate.rate).toFixed(2);
         }
-
-        console.log("DELIVERYCHARGEINCURRENCY - ", deliveryChargeInCurrency);
 
         // Calculate total cart price in selected currency
         const totalCartPrice = (parseFloat(totalPriceInINR) + parseFloat(deliveryChargeInINR)).toFixed(2);
