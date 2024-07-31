@@ -104,19 +104,19 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
         // Determine delivery charge based on country
         let deliveryCharge = 0;
         if (country === 'INDIA') {
-            if (totalPrice > 0 && totalPrice < 500) {
+            if (totalPriceInINR > 0 && totalPriceInINR < 500) {
                 deliveryCharge = 99;
-            } else if (totalPrice >= 500 && totalPrice < 1000) {
+            } else if (totalPriceInINR >= 500 && totalPriceInINR < 1000) {
                 deliveryCharge = 59;
-            } else if (totalPrice >= 1000) {
+            } else if (totalPriceInINR >= 1000) {
                 deliveryCharge = 0;
             }
         } else {
-            if (totalPrice > 0 && totalPrice < 4177.78) {
+            if (totalPriceInINR > 0 && totalPriceInINR < 4177.78) {
                 deliveryCharge = 4178.62;
-            } else if (totalPrice >= 4177.78 && totalPrice < 16713.64) {
+            } else if (totalPriceInINR >= 4177.78 && totalPriceInINR < 16713.64) {
                 deliveryCharge = 3342.90;
-            } else if (totalPrice >= 16713.65) {
+            } else if (totalPriceInINR >= 16713.65) {
                 deliveryCharge = 0;
             }
         }
