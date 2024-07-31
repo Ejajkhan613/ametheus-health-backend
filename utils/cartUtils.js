@@ -88,12 +88,22 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
 
         // Calculate the total price of the cart
         let totalPriceInINR = cart.cartDetails.reduce((total, item) => {
+            // Calculate the price for the item
             let itemPrice;
-            if (currency !== "INR") {
-                const marginPercentage = variant.margin / 100;
-                itemPrice = +(item.variantDetail.salePrice * marginPercentage) || +(item.variantDetail.price * marginPercentage);
+            if (country === "INDIA") {
+                if (currency !== "INR") {
+                    itemPrice = item.salePrice !== 0 ? (item.salePrice * exchangeRate.rate).toFixed(2) : (item.price * exchangeRate.rate).toFixed(2);
+                } else {
+                    itemPrice = item.salePrice !== 0 ? item.salePrice.toFixed(2) : item.price.toFixed(2);
+                }
             } else {
-                itemPrice = +(item.variantDetail.salePrice) || +(item.variantDetail.price);
+                // NON-INDIA
+                const marginPercentage = item.margin / 100;
+                if (currency !== "INR") {
+                    itemPrice = item.salePrice !== 0 ? ((item.salePrice + (item.salePrice * marginPercentage)) * exchangeRate.rate).toFixed(2) : ((item.price + (item.price * marginPercentage)) * exchangeRate.rate).toFixed(2);
+                } else {
+                    itemPrice = item.salePrice !== 0 ? ((item.salePrice + (item.salePrice * marginPercentage))).toFixed(2) : ((item.price + (item.price * marginPercentage))).toFixed(2);
+                }
             }
 
             return total + (parseFloat(itemPrice) * item.quantity);
