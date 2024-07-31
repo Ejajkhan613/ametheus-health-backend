@@ -544,6 +544,7 @@ router.get('/', verifyToken, async (req, res) => {
 
         if (!country) {
             country = 'INDIA';
+            console.log("COUNTRY-CHANGED", country)
         }
 
         console.log("COUNTRY", country)
@@ -590,12 +591,6 @@ router.get('/', verifyToken, async (req, res) => {
                 itemPrice = item.variantDetail.salePrice !== 0 ? (item.variantDetail.salePrice + (item.variantDetail.salePrice * marginPercentage)) : (item.variantDetail.price + (item.variantDetail.price * marginPercentage));
             }
 
-            console.log("marginPercentage", item.variantDetail.margin / 100)
-            console.log("ItemPrice", item.variantDetail.price)
-            console.log("ItemSalePrice", item.variantDetail.salePrice)
-            console.log("TOTAL", total + (itemPrice * item.quantity))
-            console.log("COUNTRY", country)
-            console.log("CURRENCY", currency)
             return total + (itemPrice * item.quantity);
         }, 0);
 
