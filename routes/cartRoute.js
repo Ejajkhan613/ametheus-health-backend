@@ -530,7 +530,7 @@ router.post('/', verifyToken, async (req, res) => {
 
 // Get all cart details with prices
 router.get('/', verifyToken, async (req, res) => {
-    const { country = "INDIA", currency = "INR" } = req.query;
+    const { country, currency } = req.query;
 
     try {
         // Find the user's cart
@@ -539,6 +539,14 @@ router.get('/', verifyToken, async (req, res) => {
         // Check if the cart is found
         if (!cart) {
             return res.status(404).json({ message: 'Cart not found' });
+        }
+
+        if (!country) {
+            country = 'INDIA';
+        }
+
+        if (!currency) {
+            currency = 'INR';
         }
 
         // Fetch exchange rate for the selected currency if it's not INR
