@@ -88,7 +88,7 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
 
         // Calculate the total price of the cart
         let totalPrice = products.reduce((total, item) => {
-            console.log("ITEM-DETAILS",item)
+            console.log("ITEM-DETAILS", item)
             let itemPrice;
             if (currency !== "INR") {
                 itemPrice = item.salePrice || item.price;
@@ -98,6 +98,7 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
             }
 
             itemPrice = +itemPrice;
+            console.log("ITEM-DETAILS", itemPrice)
             return total + (parseFloat(itemPrice) * item.quantity);
         }, 0).toFixed(2);
 
