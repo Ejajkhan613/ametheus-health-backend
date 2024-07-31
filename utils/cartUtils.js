@@ -87,7 +87,7 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
         }
 
         // Calculate the total price of the cart
-        let totalPrice = cart.cartDetails.reduce((total, item) => {
+        let totalPriceInINR = cart.cartDetails.reduce((total, item) => {
             let itemPrice;
             if (currency !== "INR") {
                 itemPrice = +(item.variantDetail.salePrice) || +(item.variantDetail.price);
@@ -100,7 +100,6 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
             console.log(itemPrice);
             return total + (parseFloat(itemPrice) * item.quantity);
         }, 0);
-        console.log(totalPrice);
 
         // Determine delivery charge based on country
         let deliveryCharge = 0;
@@ -122,25 +121,45 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
             }
         }
 
-        // Convert delivery charge to the selected currency
-        let deliveryChargeInCurrency = deliveryCharge;
-        if (currency !== 'INR') {
-            deliveryChargeInCurrency = deliveryCharge * exchangeRate.rate;
+        // Determine delivery charge based on total price in INR
+        let deliveryChargeInINR = 0;
+        if (country === 'INDIA') {
+            if (totalPriceInINR > 0 && totalPriceInINR < 500) {
+                deliveryChargeInINR = 99;
+            } else if (totalPriceInINR >= 500 && totalPriceInINR < 1000) {
+                deliveryChargeInINR = 59;
+            } else if (totalPriceInINR >= 1000) {
+                deliveryChargeInINR = 0;
+            }
+        } else {
+            if (totalPriceInINR > 0 && totalPriceInINR < 4177.78) {
+                deliveryChargeInINR = 4178.62;
+            } else if (totalPriceInINR >= 4177.78 && totalPriceInINR < 16713.64) {
+                deliveryChargeInINR = 3342.90;
+            } else if (totalPriceInINR >= 16713.65) {
+                deliveryChargeInINR = 0;
+            }
         }
 
-        // Calculate total cart price
-        let totalCartPrice = (parseFloat(totalPrice) + parseFloat(deliveryChargeInCurrency));
-        totalCartPrice = (totalCartPrice * exchangeRate.rate).toFixed(2);
+        // Convert delivery charge to the selected currency
+        let deliveryChargeInCurrency = deliveryChargeInINR;
+        if (currency !== 'INR') {
+            deliveryChargeInCurrency = deliveryChargeInINR * exchangeRate.rate;
+        }
+
+        // Calculate total cart price in selected currency
+        const totalCartPrice = (parseFloat(totalPriceInINR) + parseFloat(deliveryChargeInINR)).toFixed(2);
+        const totalCartPriceInCurrency = (parseFloat(totalCartPrice) * exchangeRate.rate).toFixed(2);
 
         // Convert numbers to strings with two decimal places
-        totalPrice = parseFloat(totalPrice * exchangeRate.rate).toFixed(2);
+        let totalPrice = parseFloat(parseFloat(totalPriceInINR) * exchangeRate.rate).toFixed(2);
         deliveryChargeInCurrency = parseFloat(deliveryChargeInCurrency).toFixed(2);
 
         // Return the results
         return {
             requiresPrescription,
             products,
-            totalCartPrice: totalCartPrice.toString(),
+            totalCartPrice: totalCartPriceInCurrency.toString(),
             deliveryCharge: deliveryChargeInCurrency.toString(),
             totalPrice: totalPrice.toString()
         };
