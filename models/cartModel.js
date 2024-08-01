@@ -18,7 +18,8 @@ const variantDetailSchema = new mongoose.Schema({
     widthUnit: String,
     height: Number,
     heightUnit: String,
-    currency: String
+    currency: String,
+    currencyCode: String
 });
 
 const cartDetailSchema = new mongoose.Schema({

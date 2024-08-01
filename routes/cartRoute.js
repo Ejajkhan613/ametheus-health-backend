@@ -585,9 +585,6 @@ router.get('/', verifyToken, async (req, res) => {
             }
         }
 
-        // Save the updated cart
-        await cart.save();
-
         // Calculate the total price of the cart in INR
         let totalPriceInINR = cart.cartDetails.reduce((total, item) => {
             let marginValue = item.variantDetail.margin / 100;
@@ -644,6 +641,42 @@ router.get('/', verifyToken, async (req, res) => {
 
 
         deliveryChargeInCurrency = parseFloat(deliveryChargeInCurrency).toFixed(2);
+
+        // Update cart details with converted prices and currency symbol
+        cart.cartDetails = cart.cartDetails.map(item => {
+            let convertedPrice = item.variantDetail.price;
+            let convertedSalePrice = item.variantDetail.salePrice;
+
+            if (country === "INDIA") {
+                if (currency !== "INR") {
+                    convertedPrice = (item.variantDetail.price * exchangeRate.rate).toFixed(2);
+                    convertedSalePrice = item.variantDetail.salePrice !== 0 ? (item.variantDetail.salePrice * exchangeRate.rate).toFixed(2) : 0;
+                }
+            } else {
+                // NON-INDIA
+                const marginPercentage = item.variantDetail.margin / 100;
+                convertedPrice = ((item.variantDetail.price + (item.variantDetail.price * marginPercentage))).toFixed(2);
+                convertedSalePrice = ((item.variantDetail.salePrice + (item.variantDetail.salePrice * marginPercentage))).toFixed(2);
+                if (currency !== "INR") {
+                    convertedPrice = (convertedPrice * exchangeRate.rate).toFixed(2);
+                    convertedSalePrice = (convertedSalePrice * exchangeRate.rate).toFixed(2);
+                }
+            }
+
+            return {
+                ...item,
+                variantDetail: {
+                    ...item.variantDetail,
+                    price: convertedPrice,
+                    salePrice: convertedSalePrice,
+                    currency: exchangeRate.symbol,
+                    currencyCode: currency
+                }
+            };
+        });
+
+        // Save the updated cart
+        await cart.save();
 
         // Send the response with calculated prices and currency
         res.status(200).json({
