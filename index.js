@@ -17,7 +17,6 @@ const passport = require('passport');
 const session = require('express-session');
 require('./config/passport-setup');
 
-
 const DBConnection = require('./config/db');
 const { rateLimiter } = require('./middlewares/rateLimiter');
 const logger = require('./middlewares/logger');
@@ -26,7 +25,7 @@ const userRouter = require('./routes/userRoute');
 const addressRouter = require('./routes/userAddressRoute');
 const healthRecordRouter = require('./routes/healthRecordRoute');
 const manufacturerRouter = require('./routes/manufacturerRoute');
-const cateogryRoute = require('./routes/categoryRoute');
+const categoryRoute = require('./routes/categoryRoute');
 const genericRoute = require('./routes/genericRoute');
 const productRoute = require('./routes/productRoute');
 const wishlistRoute = require('./routes/wishlistRoute');
@@ -48,7 +47,6 @@ app.use(morgan('combined'));
 app.use(bodyParser.json());
 app.use(rateLimiter);
 
-
 app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
@@ -63,15 +61,10 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-
-
-
 // Routes
 app.get('/ah/', async (req, res) => {
     return res.status(200).send({ 'msg': 'Server is Up' });
 });
-
-
 
 // Routes for Google OAuth
 app.get('/auth/google', passport.authenticate('google', {
@@ -81,60 +74,36 @@ app.get('/auth/google', passport.authenticate('google', {
 app.get('/auth/google/callback', passport.authenticate('google'), (req, res) => {
     try {
         const token = generateToken(req.user);
+        const message = req.user.isNewUser ? 'Signup successful' : 'Login successful';
+
         res.status(200).json({
-            msg: 'Login successful',
+            msg: message,
             x_auth_token: token,
             x_userid: req.user._id,
             x_user: req.user.name
         });
     } catch (error) {
-        res.status(500).json({ msg: 'Login failed', error: error.message });
+        res.status(500).json({ msg: 'Authentication failed', error: error.message });
     }
 });
-
 
 app.get('/logout', (req, res) => {
     req.logout();
     res.redirect('/');
 });
 
-
-
-// User
+// API Routes
 app.use('/ah/api/v1/user', userRouter);
-
-// User Address
 app.use('/ah/api/v1/address', addressRouter);
-
-// Health Records
 app.use('/ah/api/v1/health-record', healthRecordRouter);
-
-// Medicine Manufacturer
 app.use('/ah/api/v1/manufacturer', manufacturerRouter);
-
-// Medicine Category
-app.use('/ah/api/v1/category', cateogryRoute);
-
-// Medicine Generic
+app.use('/ah/api/v1/category', categoryRoute);
 app.use('/ah/api/v1/generic', genericRoute);
-
-// Medicines
 app.use('/ah/api/v1/product', productRoute);
-
-// Wishlist
 app.use('/ah/api/v1/wishlist', wishlistRoute);
-
-// Cart
 app.use('/ah/api/v1/cart', cartRoute);
-
-// Order
 app.use('/ah/api/v1/order', checkoutRoute);
-
-// Cart
 app.use('/ah/api/v1/currency', currencyRouter);
-
-
-
 
 // HTTPS Server Configuration
 const privateKey = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/privkey.pem', 'utf8');
@@ -143,7 +112,6 @@ const credentials = { key: privateKey, cert: certificate };
 
 // Starting HTTPS Server
 const httpsServer = https.createServer(credentials, app);
-
 
 const fetchAndUpdateRates = async () => {
     try {
@@ -172,10 +140,8 @@ const fetchAndUpdateRates = async () => {
     }
 };
 
-
-// Scheduled the cron job to run every 6 hours
+// Schedule the cron job to run every 6 hours
 cron.schedule('0 */6 * * *', fetchAndUpdateRates);
-
 
 httpsServer.listen(Port, async () => {
     try {
@@ -188,4 +154,3 @@ httpsServer.listen(Port, async () => {
 }).on('error', (error) => {
     console.error(`Error starting server: ${error.message}`);
 });
-

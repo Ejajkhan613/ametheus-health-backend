@@ -1,3 +1,4 @@
+// passport-setup.js
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/userModel');
@@ -16,6 +17,7 @@ passport.use(
             const existingUser = await User.findOne({ googleId: profile.id });
             if (existingUser) {
                 // User already exists
+                existingUser.isNewUser = false;
                 return done(null, existingUser);
             }
 
@@ -26,6 +28,7 @@ passport.use(
                 email: profile.emails[0].value,
                 avatar: profile._json.picture,
                 authMethod: 'google',
+                isNewUser: true // Set this flag for new users
             });
 
             await newUser.save();
