@@ -71,7 +71,7 @@ app.get('/auth/google', passport.authenticate('google', {
     scope: ['profile', 'email']
 }));
 
-app.get('/auth/google/callback', passport.authenticate('google'), (req, res) => {
+app.post('/auth/google/callback', passport.authenticate('google'), (req, res) => {
     try {
         const token = generateToken(req.user);
         const message = req.user.isNewUser ? 'Signup successful' : 'Login successful';
