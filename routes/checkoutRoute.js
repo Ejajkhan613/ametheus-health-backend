@@ -143,6 +143,10 @@ router.post('/create-order',
 
             // Convert totalCartPrice to integer (smallest currency sub-unit)
 
+            if (currency == "RUB") {
+                totalCartPrice = Math.round(parseFloat(+totalCartPrice) * 100);
+            }
+
             // Create Razorpay order
             const order = await createOrder(+totalCartPrice, currency);
             console.log(order.id);
