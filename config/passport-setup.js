@@ -1,7 +1,7 @@
-// passport-setup.js
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const User = require('../models/userModel'); // Adjust the path as necessary
+const User = require('../models/userModel');
+const jwt = require('jsonwebtoken');
 
 // Configure Passport to use Google Strategy
 passport.use(
@@ -24,7 +24,7 @@ passport.use(
                 googleId: profile.id,
                 name: profile.displayName,
                 email: profile.emails[0].value,
-                // Add any additional fields as needed
+                avatar: profile._json.picture,
                 authMethod: 'google',
             });
 

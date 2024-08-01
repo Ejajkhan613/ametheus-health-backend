@@ -8,14 +8,15 @@ const helmet = require('helmet');
 const cors = require('cors');
 const morgan = require('morgan');
 const bodyParser = require('body-parser');
+
 const cron = require('node-cron');
 const axios = require('axios');
+const ExchangeRate = require('./models/currencyPriceModel');
 
 const passport = require('passport');
 const session = require('express-session');
 require('./config/passport-setup');
 
-const ExchangeRate = require('./models/currencyPriceModel');
 
 const DBConnection = require('./config/db');
 const { rateLimiter } = require('./middlewares/rateLimiter');
@@ -33,6 +34,8 @@ const cartRoute = require('./routes/cartRoute');
 const checkoutRoute = require('./routes/checkoutRoute');
 const currencyRouter = require('./routes/currencyPriceRoute');
 
+const generateToken = require('./utils/tokenUtils');
+
 const app = express();
 
 const Port = process.env.PORT || 4100;
@@ -49,8 +52,14 @@ app.use(rateLimiter);
 app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: true
+    saveUninitialized: true,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 15 * 24 * 60 * 60 * 1000
+    }
 }));
+
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -70,8 +79,19 @@ app.get('/auth/google', passport.authenticate('google', {
 }));
 
 app.get('/auth/google/callback', passport.authenticate('google'), (req, res) => {
-    res.redirect('/profile');
+    try {
+        const token = generateToken(req.user);
+        res.status(200).json({
+            msg: 'Login successful',
+            x_auth_token: token,
+            x_userid: req.user._id,
+            x_user: req.user.name
+        });
+    } catch (error) {
+        res.status(500).json({ msg: 'Login failed', error: error.message });
+    }
 });
+
 
 app.get('/logout', (req, res) => {
     req.logout();
@@ -162,7 +182,10 @@ httpsServer.listen(Port, async () => {
         await DBConnection;
         console.log(`Connected to DB`);
     } catch (error) {
-        console.log(`Connection to DB Failed`)
+        console.error(`Connection to DB Failed: ${error.message}`);
     }
-    console.log(`Server is Up on Port ${Port}`)
-})
+    console.log(`Server is Up on Port ${Port}`);
+}).on('error', (error) => {
+    console.error(`Error starting server: ${error.message}`);
+});
+
