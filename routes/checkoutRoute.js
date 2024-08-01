@@ -241,7 +241,7 @@ router.patch('/update-order/:orderId',
     verifyToken,
     [
         body('status').isString().notEmpty(),
-        body('trackingLink').isString().optional().isURL(),
+        body('trackingLink').isString().optional(),
         body('deliveryPartner').isString().optional(),
     ],
     async (req, res) => {
