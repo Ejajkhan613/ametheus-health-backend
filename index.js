@@ -67,11 +67,11 @@ app.get('/ah/', async (req, res) => {
 });
 
 // Routes for Google OAuth
-app.get('/ah/api/v1/auth/google', passport.authenticate('google', {
+app.get('/auth/google', passport.authenticate('google', {
     scope: ['profile', 'email']
 }));
 
-app.post('/ah/api/v1/auth/google/callback', passport.authenticate('google'), (req, res) => {
+app.post('/auth/google/callback', passport.authenticate('google'), (req, res) => {
     try {
         const token = generateToken(req.user);
         const message = req.user.isNewUser ? 'Signup successful' : 'Login successful';
