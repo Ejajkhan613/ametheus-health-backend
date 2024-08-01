@@ -285,7 +285,7 @@ router.get('/admin/orders', verifyToken, async (req, res) => {
             .sort({ timeStamp: -1 });
 
         // Count total orders for pagination
-        const totalOrders = await Order.countDocuments(query);
+        const totalOrders = await Order.countDocuments(filter);
 
         res.json({
             orders,
