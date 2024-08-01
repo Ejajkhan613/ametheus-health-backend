@@ -347,7 +347,7 @@ router.get('/admin/orders/:id', verifyToken, async (req, res) => {
             return res.status(404).send({ msg: 'Order not found' });
         }
 
-        let user = await UserModel.findById(order._id).select('-password -__v');
+        let user = await UserModel.findById(order.userID).select('-password -__v');
         order.user = user;
 
         res.json(order);
