@@ -266,7 +266,7 @@ router.patch('/update-order/:orderId',
     }
 );
 
-// Get all Orders
+// Get all Orders with search, filter and pagination
 router.get('/admin/orders', verifyToken, async (req, res) => {
     try {
         let {
