@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
@@ -86,6 +87,7 @@ const createOrder = async (totalCartPrice, currency) => {
     });
 };
 
+// Create Order Route
 router.post('/create-order',
     verifyToken,
     [
@@ -264,19 +266,42 @@ router.patch('/update-order/:orderId',
     }
 );
 
-// Route to get latest orders with user details
+// Get all Orders
 router.get('/admin/orders', verifyToken, async (req, res) => {
     try {
-        let { status, page = 1, limit = 10 } = req.query;
+        let {
+            status, page = 1, limit = 10,
+            search
+        } = req.query;
+
         let skip = (page - 1) * limit;
 
+        // Initialize filter object
         let filter = {};
 
-        if (status == "" || status == null || status == undefined) {
-
-        } else {
-            filter.status = status;
+        // If search parameter is provided, build the filter
+        if (search) {
+            // Check if search is a valid ObjectId
+            if (mongoose.Types.ObjectId.isValid(search)) {
+                filter.$or = [
+                    { _id: search },
+                    { userID: search }
+                ];
+            } else {
+                // Build a filter for string matching
+                filter.$or = [
+                    { name: new RegExp(search, 'i') },
+                    { country: new RegExp(search, 'i') },
+                    { pincode: new RegExp(search, 'i') },
+                    { mobile: new RegExp(search, 'i') },
+                    { email: new RegExp(search, 'i') },
+                    { currency: new RegExp(search, 'i') }
+                ];
+            }
         }
+
+        // Add status filter if provided
+        if (status) filter.status = status;
 
         // Fetch orders with pagination and user details
         const orders = await Order.find(filter)
@@ -298,6 +323,7 @@ router.get('/admin/orders', verifyToken, async (req, res) => {
         res.status(500).send('Internal Server Error');
     }
 });
+
 
 // Route to get all orders for a specific user
 router.get('/admin/user-orders/:userID', verifyToken, async (req, res) => {
