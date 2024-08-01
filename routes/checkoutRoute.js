@@ -124,7 +124,7 @@ router.post('/create-order',
                 return res.status(400).send('Unable to calculate cart details');
             }
 
-            const { requiresPrescription, products, totalCartPrice, deliveryCharge, totalPrice } = cartDetails;
+            let { requiresPrescription, products, totalCartPrice, deliveryCharge, totalPrice } = cartDetails;
 
             let prescriptionURL = '';
             let passportURL = '';
