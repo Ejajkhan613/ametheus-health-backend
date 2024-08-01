@@ -324,30 +324,6 @@ router.get('/admin/orders', verifyToken, async (req, res) => {
     }
 });
 
-// Route to get all orders for a specific user
-router.get('/admin/user-orders/:userID', verifyToken, async (req, res) => {
-    try {
-        const { userID } = req.params;
-
-        // Fetch user details
-        const user = await User.findById(userID);
-        if (!user) {
-            return res.status(404).send('User not found');
-        }
-
-        // Fetch orders for the user
-        const orders = await Order.find({ userID }).sort({ timeStamp: -1 });
-
-        res.json({
-            user,
-            orders
-        });
-    } catch (error) {
-        console.error('Error fetching orders for user:', error);
-        res.status(500).send('Internal Server Error');
-    }
-});
-
 // Route to get past purchases for a user
 router.get('/user/orders', verifyToken, async (req, res) => {
     try {
