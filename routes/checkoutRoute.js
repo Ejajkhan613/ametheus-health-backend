@@ -13,6 +13,7 @@ const { calculateTotalCartPrice } = require('../utils/cartUtils');
 const Order = require('../models/orderModel');
 const User = require('../models/userModel');
 const verifyToken = require('../middlewares/auth');
+const UserModel = require('../models/userModel');
 
 // Initialize Razorpay instance
 const razorpay = new Razorpay({
@@ -340,11 +341,14 @@ router.get('/admin/orders/:id', verifyToken, async (req, res) => {
         }
 
         // Find the order by ID
-        const order = await Order.findById(id);
+        const order = await Order.findById(id).lean();
 
         if (!order) {
             return res.status(404).send({ msg: 'Order not found' });
         }
+
+        let user = await UserModel.findById(order._id).select('-password -__v');
+        order.user = user;
 
         res.json(order);
     } catch (error) {
@@ -352,7 +356,6 @@ router.get('/admin/orders/:id', verifyToken, async (req, res) => {
         res.status(500).send('Internal Server Error');
     }
 });
-
 
 // Route to get past purchases for a user
 router.get('/user/orders', verifyToken, async (req, res) => {
