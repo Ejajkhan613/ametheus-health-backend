@@ -267,23 +267,22 @@ router.patch('/update-order/:orderId',
 // Route to get latest orders with user details
 router.get('/admin/orders', verifyToken, async (req, res) => {
     try {
-        const { filter = 'all', page = 1, limit = 10 } = req.query;
-        const skip = (page - 1) * limit;
+        let { status, page = 1, limit = 10 } = req.query;
+        let skip = (page - 1) * limit;
 
-        // Build query based on filter
-        let query = {};
-        if (filter === 'successful') {
-            query.status = 'Completed';
-        } else if (filter === 'failed') {
-            query.status = 'Failed';
+        let filter = {};
+
+        if (status == "" || status == null || status == undefined) {
+
+        } else {
+            filter.status = status;
         }
 
         // Fetch orders with pagination and user details
-        const orders = await Order.find(query)
+        const orders = await Order.find(filter)
             .skip(skip)
             .limit(parseInt(limit))
-            .sort({ timeStamp: -1 })
-            .populate('userID', 'name email'); // Populate user details
+            .sort({ timeStamp: -1 });
 
         // Count total orders for pagination
         const totalOrders = await Order.countDocuments(query);
