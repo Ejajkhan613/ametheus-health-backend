@@ -5,7 +5,6 @@ const ProductModel = require('../models/productModel'); // Import the Product mo
 // Calculate total cart price based on userID, country, and currency
 const calculateTotalCartPrice = async (userID, country, currency) => {
     try {
-
         if (country == "null" || country == "undefined" || country == null || country == undefined) {
             country = 'INDIA';
         }
@@ -19,14 +18,12 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
         if (currency !== 'INR') {
             exchangeRate = await ExchangeRate.findOne({ currency: currency });
             if (!exchangeRate) {
-                return res.status(404).json({ message: 'Exchange rate not found for the selected currency' });
+                throw new Error('Exchange rate not found for the selected currency');
             }
         }
 
         // Find the user's cart
         const cart = await CartModel.findOne({ userID: userID });
-
-        // Check if the cart is found
         if (!cart) {
             return { error: 'Cart not found' };
         }
@@ -38,7 +35,7 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
         for (let item of cart.cartDetails) {
             const product = await ProductModel.findById(item.productID);
             if (product) {
-                // Check if the product requires prescription
+                // Check if the product requires a prescription
                 if (product.productDetail && product.productDetail.isPrescriptionRequired) {
                     requiresPrescription = true;
                 }
@@ -72,8 +69,8 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
                         packSize: variant.packSize,
                         margin: variant.margin,
                         quantity: item.quantity,
-                        price: (price).toFixed(2),
-                        salePrice: (salePrice).toFixed(2),
+                        price: price.toFixed(2),
+                        salePrice: salePrice.toFixed(2),
                         currency: exchangeRate.symbol
                     });
                 } else {
@@ -86,28 +83,24 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
             }
         }
 
-        // Calculate the total price of the cart
+        // Calculate the total price of the cart in INR
         let totalPriceInINR = cart.cartDetails.reduce((total, item) => {
-            // Calculate the price for the item
-            let itemPrice;
-            if (country === "INDIA") {
-                if (currency !== "INR") {
-                    itemPrice = item.salePrice !== 0 ? (item.salePrice * exchangeRate.rate).toFixed(2) : (item.price * exchangeRate.rate).toFixed(2);
-                } else {
-                    itemPrice = item.salePrice !== 0 ? item.salePrice.toFixed(2) : item.price.toFixed(2);
-                }
-            } else {
-                // NON-INDIA
-                const marginPercentage = item.margin / 100;
-                if (currency !== "INR") {
-                    itemPrice = item.salePrice !== 0 ? ((item.salePrice + (item.salePrice * marginPercentage)) * exchangeRate.rate).toFixed(2) : ((item.price + (item.price * marginPercentage)) * exchangeRate.rate).toFixed(2);
-                } else {
-                    itemPrice = item.salePrice !== 0 ? ((item.salePrice + (item.salePrice * marginPercentage))).toFixed(2) : ((item.price + (item.price * marginPercentage))).toFixed(2);
-                }
+            let marginValue = item.variantDetail.margin / 100;
+
+            // Use base price (salePrice or price) for calculation
+            let itemPrice = parseFloat(item.variantDetail.salePrice) || parseFloat(item.variantDetail.price);
+
+            if (country !== "INDIA") {
+                let priceWithMargin = itemPrice + (itemPrice * marginValue);
+
+                itemPrice = priceWithMargin;
             }
 
-            return total + (parseFloat(itemPrice) * item.quantity);
+            total += (parseFloat(itemPrice) * item.quantity);
+            return total;
         }, 0);
+
+        totalPriceInINR = totalPriceInINR <= 0 ? 0.1 : totalPriceInINR;
 
         // Determine delivery charge based on total price in INR
         let deliveryChargeInINR = 0;
@@ -129,25 +122,18 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
             }
         }
 
-        console.log("totalPriceInINR", totalPriceInINR)
-        console.log("deliveryChargeInINR", deliveryChargeInINR)
-
         // Convert delivery charge to the selected currency
         let deliveryChargeInCurrency = deliveryChargeInINR;
         if (currency !== 'INR') {
             deliveryChargeInCurrency = deliveryChargeInINR * exchangeRate.rate;
         }
-        console.log("deliveryChargeInCurrency", deliveryChargeInCurrency)
 
         // Calculate total cart price in selected currency
-        const totalCartPrice = (parseFloat(totalPriceInINR) + parseFloat(deliveryChargeInINR)).toFixed(2);
-        const totalCartPriceInCurrency = (parseFloat(totalCartPrice) * exchangeRate.rate).toFixed(2);
-
-        console.log("totalCartPrice", totalCartPrice)
-        console.log("totalCartPriceInCurrency", totalCartPriceInCurrency)
+        const totalCartPrice = parseFloat(totalPriceInINR) + parseFloat(deliveryChargeInINR);
+        const totalCartPriceInCurrency = (totalCartPrice * exchangeRate.rate).toFixed(2);
 
         // Convert numbers to strings with two decimal places
-        let totalPrice = parseFloat(parseFloat(totalPriceInINR) * exchangeRate.rate).toFixed(2);
+        let totalPrice = (parseFloat(totalPriceInINR) * exchangeRate.rate).toFixed(2);
         deliveryChargeInCurrency = parseFloat(deliveryChargeInCurrency).toFixed(2);
 
         // Return the results
