@@ -241,6 +241,7 @@ router.patch('/update-order/:orderId',
     [
         body('status').isString().notEmpty(),
         body('trackingLink').isString().optional().isURL(),
+        body('deliveryPartner').isString().optional(),
     ],
     async (req, res) => {
         const errors = validationResult(req);
@@ -254,14 +255,14 @@ router.patch('/update-order/:orderId',
 
         try {
             const { orderId } = req.params;
-            const { status, trackingLink } = req.body;
+            const { status, trackingLink, deliveryPartner } = req.body;
 
-            const updatedOrder = await Order.findByIdAndUpdate(orderId, { status, trackingLink }, { new: true });
+            const updatedOrder = await Order.findByIdAndUpdate(orderId, { status, trackingLink, deliveryPartner }, { new: true });
             if (!updatedOrder) {
                 return res.status(404).send('Order not found');
             }
 
-            res.json(updatedOrder);
+            res.status(200).json({ 'msg': updatedOrder });
         } catch (error) {
             console.error('Error updating order:', error);
             res.status(500).send('Internal Server Error');

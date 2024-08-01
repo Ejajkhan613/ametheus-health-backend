@@ -132,6 +132,10 @@ const orderSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  deliveryPartner: {
+    type: String,
+    default: null
+  },
   payment: {
     orderId: {
       type: String,
