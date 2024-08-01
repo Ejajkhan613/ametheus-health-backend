@@ -324,6 +324,35 @@ router.get('/admin/orders', verifyToken, async (req, res) => {
     }
 });
 
+// Get an Order by ID
+router.get('/admin/orders/:id', verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).send({ msg: 'Access Denied' });
+    }
+
+    try {
+        const { id } = req.params;
+
+        // Check if the ID is a valid ObjectId
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).send({ msg: 'Invalid Order ID' });
+        }
+
+        // Find the order by ID
+        const order = await Order.findById(id);
+
+        if (!order) {
+            return res.status(404).send({ msg: 'Order not found' });
+        }
+
+        res.json(order);
+    } catch (error) {
+        console.error('Error fetching order by ID:', error);
+        res.status(500).send('Internal Server Error');
+    }
+});
+
+
 // Route to get past purchases for a user
 router.get('/user/orders', verifyToken, async (req, res) => {
     try {
