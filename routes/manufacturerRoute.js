@@ -7,6 +7,7 @@ const verifyToken = require('../middlewares/auth');
 
 const ManufacturerModel = require('../models/manufacturerModel');
 const ProductModel = require('../models/productModel');
+const ExchangeRate = require('../models/currencyPriceModel');
 
 const manufacturerRouter = express.Router();
 

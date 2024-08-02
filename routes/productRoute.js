@@ -475,7 +475,7 @@ productRoute.get('/search/', async (req, res) => {
             ];
             if (isValidObjectId(search)) {
                 filters.$or.push({ genericID: search });
-                filters.$or.push({ categoryID: search });
+                filters.$or.push({ categoryID: { $in: [search] } });
                 filters.$or.push({ manufacturerID: search });
                 filters.$or.push({ _id: search });
             }
@@ -566,7 +566,7 @@ productRoute.get('/', async (req, res) => {
 
             if (isValidObjectId(search)) {
                 filters.$or.push({ _id: search });
-                filters.$or.push({ genericID: search });
+                filters.$or.push({ categoryID: { $in: [search] } });
                 filters.$or.push({ categoryID: search });
                 filters.$or.push({ manufacturerID: search });
             }
@@ -710,7 +710,7 @@ productRoute.get('/:id', async (req, res) => {
 // Route to fetch products by category ID (currency added)
 productRoute.get('/category/:id', async (req, res) => {
     try {
-        const products = await ProductModel.find({ categoryID: req.params.id, isVisible: true }).lean();
+        const products = await ProductModel.find({ categoryID: { $in: [req.params.id] }, isVisible: true }).lean();
         if (!products || products.length === 0) {
             return res.status(404).send({ msg: 'No products found for this category' });
         }

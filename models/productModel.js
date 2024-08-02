@@ -152,8 +152,8 @@ const productSchema = new mongoose.Schema({
         default: ""
     },
     categoryID: {
-        type: String,
-        default: ""
+        type: [String],
+        default: []
     },
     tags: {
         type: String,

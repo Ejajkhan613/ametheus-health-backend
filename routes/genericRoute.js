@@ -46,7 +46,6 @@ genericRoute.get('/', async (req, res) => {
         // Determine if search term is a valid ObjectId
         const isValidObjectId = mongoose.Types.ObjectId.isValid(req.query.search || '');
         let filters = {};
-        console.log("QUERY", req.query.search);
 
         if (isValidObjectId) {
             filters._id = req.query.search;
@@ -77,7 +76,6 @@ genericRoute.get('/', async (req, res) => {
             .sort(sortOptions)
             .collation({ locale: 'en', strength: 2 })
             .lean();
-        console.log("QUERY", generics);
 
         res.status(200).send({
             msg: 'Success',
@@ -107,6 +105,7 @@ genericRoute.get('/names', verifyToken, async (req, res) => {
             searchQuery = { _id: mongoose.Types.ObjectId(search) };
         } else if (search) {
             searchQuery = { name: { $regex: search, $options: 'i' } };
+            searchQuery = { slug: { $regex: search, $options: 'i' } };
         }
 
         // Fetch generics, filtered by search if provided
@@ -198,7 +197,7 @@ genericRoute.get('/:id', async (req, res) => {
                     variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
                     variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
                 }
-                variant.currency = currencySymbol; // Set the currency symbol
+                variant.currency = currencySymbol;
             });
         });
 

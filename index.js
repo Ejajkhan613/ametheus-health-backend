@@ -73,6 +73,10 @@ app.get('/ah/auth/google', passport.authenticate('google', {
 
 app.post('/ah/auth/google/callback', passport.authenticate('google'), (req, res) => {
     try {
+        console.log(req.user);
+        console.log(req.query);
+        console.log(req.headers);
+        console.log(req.body);
         const token = generateToken(req.user);
         const message = req.user.isNewUser ? 'Signup successful' : 'Login successful';
 
