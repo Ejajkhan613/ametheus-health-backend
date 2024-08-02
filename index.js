@@ -99,7 +99,7 @@ app.post('/ah/auth/google/callback', async (req, res) => {
         console.log(user);
 
         // Generate a JWT token for the authenticated user
-        const x_auth_token = jwt.sign({ userID: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const x_auth_token = jwt.sign({ userID: user._id }, process.env.SECRET_KEY, { expiresIn: '15d' });
 
         // Respond with the token and user information
         res.json({
