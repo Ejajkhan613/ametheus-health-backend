@@ -12,6 +12,7 @@ const bodyParser = require('body-parser');
 const cron = require('node-cron');
 const axios = require('axios');
 const ExchangeRate = require('./models/currencyPriceModel');
+const jwt = require('jsonwebtoken');
 
 const passport = require('passport');
 const session = require('express-session');
@@ -98,7 +99,7 @@ app.post('/ah/auth/google/callback', async (req, res) => {
         console.log(user);
 
         // Generate a JWT token for the authenticated user
-        const x_auth_token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const x_auth_token = jwt.sign({ userID: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
         // Respond with the token and user information
         res.json({
@@ -120,13 +121,14 @@ const findOrCreateUser = async ({ googleId, email, name }) => {
     if (!user) {
         const uhid = await generateUHID();
         const password = generateSecurePassword();
+        const hashedPass = await bcrypt.hash(password, 11);
         // If user does not exist, create a new one
         user = new UserModel({
             googleId,
             email,
             name,
             uhid,
-            password,
+            password: hashedPass,
             authMethod: 'google'
         });
         await user.save();
