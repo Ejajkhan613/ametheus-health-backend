@@ -117,11 +117,13 @@ const findOrCreateUser = async ({ googleId, email, name }) => {
     let user = await UserModel.findOne({ googleId });
 
     if (!user) {
+        const uhid = await generateUHID();
         // If user does not exist, create a new one
         user = new UserModel({
             googleId,
             email,
             name,
+            uhid,
             authMethod: 'google'
         });
         await user.save();
