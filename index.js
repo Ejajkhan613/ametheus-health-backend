@@ -42,10 +42,19 @@ const Port = process.env.PORT || 4100;
 // Middleware
 app.use(express.json());
 app.use(helmet());
-app.use(cors());
+// app.use(cors());
 app.use(morgan('combined'));
 app.use(bodyParser.json());
 app.use(rateLimiter);
+
+// Middleware
+app.use(cors({
+    origin: 'https://ah-medicine-new.vercel.app', // Replace with your frontend domain
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    credentials: true
+}));
+app.use(bodyParser.json());
+
 
 app.use(session({
     secret: process.env.SESSION_SECRET,
