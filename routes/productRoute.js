@@ -128,10 +128,10 @@ productRoute.post('/import', verifyToken, async (req, res) => {
             additionalInformation: row.AdditionalInformation,
             moreInformation: row.MoreInformation,
             purchaseNote: row.PurchaseNote,
-            categoryID: row.CategoryID,
+            categoryID: row.CategoryID && row.categoryID !== "" ? row.CategoryID.split(',').map(id => id.trim()) : [],
             tags: row.Tags,
-            upSell: row.UpSell ? row.UpSell.split(',') : [],
-            crossSell: row.CrossSell ? row.CrossSell.split(',') : [],
+            upSell: row.UpSell ? row.UpSell.split(',').map(item => item.trim()) : [],
+            crossSell: row.CrossSell ? row.CrossSell.split(',').map(item => item.trim()) : [],
             externalLink: row.ExternalLink,
             position: parseInt(row.Position),
             manufacturerID: row.ManufacturerID,
@@ -164,7 +164,7 @@ productRoute.get('/export', verifyToken, async (req, res) => {
         const { categoryID, genericID, manufacturerID, originCountry } = req.query;
 
         const filters = {};
-        if (categoryID) filters.categoryID = categoryID;
+        if (categoryID) filters.categoryID = { $in: categoryID.split(',').map(id => id.trim()) };
         if (genericID) filters.genericID = genericID;
         if (manufacturerID) filters.manufacturerID = manufacturerID;
         if (originCountry) filters.originCountry = originCountry;
@@ -189,7 +189,7 @@ productRoute.get('/export', verifyToken, async (req, res) => {
                 AdditionalInformation: product.additionalInformation,
                 MoreInformation: product.moreInformation,
                 PurchaseNote: product.purchaseNote,
-                CategoryID: product.categoryID,
+                CategoryID: product.categoryID.join(','),
                 Tags: product.tags,
                 UpSell: product.upSell.join(','),
                 CrossSell: product.crossSell.join(','),

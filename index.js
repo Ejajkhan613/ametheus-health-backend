@@ -71,25 +71,54 @@ app.get('/ah/auth/google', passport.authenticate('google', {
     scope: ['profile', 'email']
 }));
 
-app.post('/ah/auth/google/callback', passport.authenticate('google'), (req, res) => {
-    try {
-        console.log(req.user);
-        console.log(req.query);
-        console.log(req.headers);
-        console.log(req.body);
-        const token = generateToken(req.user);
-        const message = req.user.isNewUser ? 'Signup successful' : 'Login successful';
 
-        res.status(200).json({
-            msg: message,
-            x_auth_token: token,
-            x_userid: req.user._id,
-            x_user: req.user.name
+// Endpoint to handle Google OAuth callback
+app.post('/ah/auth/google/callback', async (req, res) => {
+    const { token } = req.body;
+
+    try {
+        // Verify the token with Google
+        const response = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`);
+        const { email, sub: googleId, name } = response.data;
+
+        // Custom logic to create or retrieve the user from your database
+        let user = await findOrCreateUser({ googleId, email, name });
+
+        // Generate a JWT token for the authenticated user
+        const x_auth_token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+        // Respond with the token and user information
+        res.json({
+            x_auth_token,
+            x_user: user.name,
+            x_userid: user._id
         });
     } catch (error) {
-        res.status(500).json({ msg: 'Authentication failed', error: error.message });
+        console.error("Error in Google OAuth callback:", error);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
 });
+
+// Function to find or create a user
+const findOrCreateUser = async ({ googleId, email, name }) => {
+    // Check if user exists
+    let user = await UserModel.findOne({ googleId });
+
+    if (!user) {
+        // If user does not exist, create a new one
+        user = new UserModel({
+            googleId,
+            email,
+            name,
+            authMethod: 'google'
+        });
+        await user.save();
+    }
+
+    return user;
+};
+
+
 
 app.get('/ah/api/v1/logout', (req, res) => {
     req.logout();
@@ -109,13 +138,6 @@ app.use('/ah/api/v1/cart', cartRoute);
 app.use('/ah/api/v1/order', checkoutRoute);
 app.use('/ah/api/v1/currency', currencyRouter);
 
-// HTTPS Server Configuration
-const privateKey = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/privkey.pem', 'utf8');
-const certificate = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/cert.pem', 'utf8');
-const credentials = { key: privateKey, cert: certificate };
-
-// Starting HTTPS Server
-const httpsServer = https.createServer(credentials, app);
 
 const fetchAndUpdateRates = async () => {
     try {
@@ -146,6 +168,14 @@ const fetchAndUpdateRates = async () => {
 
 // Schedule the cron job to run every 6 hours
 cron.schedule('0 */6 * * *', fetchAndUpdateRates);
+
+// HTTPS Server Configuration
+const privateKey = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/privkey.pem', 'utf8');
+const certificate = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/cert.pem', 'utf8');
+const credentials = { key: privateKey, cert: certificate };
+
+// Starting HTTPS Server
+const httpsServer = https.createServer(credentials, app);
 
 httpsServer.listen(Port, async () => {
     try {
