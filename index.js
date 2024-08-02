@@ -52,7 +52,7 @@ app.use(rateLimiter);
 
 // Middleware
 app.use(cors({
-    origin: 'https://ah-medicine-new.vercel.app', // Replace with your frontend domain
+    origin: ['https://ah-medicine-new.vercel.app', 'https://ametheushealth-admin-dashboard.vercel.app/'], // Replace with your frontend domain
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true
 }));
