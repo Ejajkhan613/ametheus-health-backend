@@ -611,11 +611,10 @@ categoryRoute.get('/:id', async (req, res) => {
 categoryRoute.get('/slug/:slug', async (req, res) => {
     try {
         const { slug } = req.params;
-        let category = await Category.findOne({ slug }).populate('children');
+        let category = await Category.findOne({ slug }).populate('children').lean();
         if (!category) {
             return res.status(404).send({ msg: 'Category not found' });
         }
-        category = category.toObject();
 
         const products = await ProductModel.find({ categoryID: { $in: [category._id] } }).lean();
 
