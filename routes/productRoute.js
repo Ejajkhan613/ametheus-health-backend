@@ -826,7 +826,7 @@ productRoute.get('/slug/:slug', async (req, res) => {
 //         // Update all products to set `isStockAvailable` to true in all variants
 //         const result = await ProductModel.updateMany(
 //             {},
-//             { $set: { "variants.$[elem].isStockAvailable": true } },
+//             { $set: { "variants.$[elem].isStockAvailable": true, "isVisible": true } },
 //             { arrayFilters: [{ "elem.isStockAvailable": { $ne: true } }], multi: true }
 //         );
 //         let count = result.modifiedCount;

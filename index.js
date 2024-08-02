@@ -56,7 +56,6 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true
 }));
-app.use(bodyParser.json());
 
 
 app.use(session({

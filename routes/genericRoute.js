@@ -109,7 +109,7 @@ genericRoute.get('/names', verifyToken, async (req, res) => {
         }
 
         // Fetch generics, filtered by search if provided
-        const generics = await GenericModel.find(searchQuery).select('name');
+        const generics = await GenericModel.find(searchQuery).sort('name').select('name');
 
         res.status(200).send(generics);
     } catch (error) {
