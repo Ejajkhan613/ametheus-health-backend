@@ -87,12 +87,14 @@ app.post('/ah/auth/google/callback', async (req, res) => {
     const { token } = req.body;
 
     try {
+        console.log(token);
         // Verify the token with Google
         const response = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`);
         const { email, sub: googleId, name } = response.data;
 
         // Custom logic to create or retrieve the user from your database
         let user = await findOrCreateUser({ googleId, email, name });
+        console.log(user);
 
         // Generate a JWT token for the authenticated user
         const x_auth_token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
