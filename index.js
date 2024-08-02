@@ -33,9 +33,9 @@ const cartRoute = require('./routes/cartRoute');
 const checkoutRoute = require('./routes/checkoutRoute');
 const currencyRouter = require('./routes/currencyPriceRoute');
 
-const generateToken = require('./utils/tokenUtils');
 const UserModel = require('./models/userModel');
 const generateUHID = require('./utils/uhidGenerator');
+const generateSecurePassword = require('./utils/passwordUtils');
 
 const app = express();
 
@@ -119,12 +119,14 @@ const findOrCreateUser = async ({ googleId, email, name }) => {
 
     if (!user) {
         const uhid = await generateUHID();
+        const password = generateSecurePassword();
         // If user does not exist, create a new one
         user = new UserModel({
             googleId,
             email,
             name,
             uhid,
+            password,
             authMethod: 'google'
         });
         await user.save();
