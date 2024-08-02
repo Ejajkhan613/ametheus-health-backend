@@ -34,6 +34,7 @@ const checkoutRoute = require('./routes/checkoutRoute');
 const currencyRouter = require('./routes/currencyPriceRoute');
 
 const generateToken = require('./utils/tokenUtils');
+const UserModel = require('./models/userModel');
 
 const app = express();
 
