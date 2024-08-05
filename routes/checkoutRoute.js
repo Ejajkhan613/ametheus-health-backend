@@ -207,9 +207,9 @@ router.post('/:id/prescription-image', verifyToken, async (req, res) => {
             return res.status(404).send({ msg: 'Order not found' });
         }
 
-        // if (order.userID !== req.userDetail._id) {
-        //     return res.status(404).send({ msg: 'Order not found...' });
-        // }
+        if (order.userID !== req.userDetail._id) {
+            return res.status(404).send({ msg: 'Order not found...' });
+        }
 
         const file = req.files && req.files.prescriptionImage;
         if (!file) {
@@ -239,7 +239,7 @@ router.post('/:id/passport-image', verifyToken, async (req, res) => {
             return res.status(404).send({ msg: 'Order not found' });
         }
         if (order.userID !== req.userDetail._id) {
-            return res.status(404).send({ msg: 'Order not found' });
+            return res.status(404).send({ msg: 'Order not found...' });
         }
 
         const file = req.files && req.files.passportImage;
