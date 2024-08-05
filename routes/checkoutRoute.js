@@ -133,20 +133,8 @@ router.post('/create-order',
 
             let { requiresPrescription, products, totalCartPrice, deliveryCharge, totalPrice } = cartDetails;
 
-            let prescriptionURL = '';
-            let passportURL = '';
-
-            // if (requiresPrescription && !req.files['prescriptionImage']) {
-            //     return res.status(400).send('Prescription image is required for some products in your cart.');
-            // }
-
-            // if (req.files['prescriptionImage']) {
-            //     prescriptionURL = await uploadFile(req.files['prescriptionImage'][0]);
-            // }
-
-            // if (req.files['passportImage']) {
-            //     passportURL = await uploadFile(req.files['passportImage'][0]);
-            // }
+            let prescriptionImage = '';
+            let passportImage = '';
 
 
             // Create Razorpay order
@@ -193,6 +181,7 @@ router.post('/create-order',
                 key_id: process.env.RZPY_KEY_ID_AH
             });
         } catch (error) {
+            console.log(error);
             console.error('Error creating order:', error);
             res.status(500).send('Internal Server Error');
         }
