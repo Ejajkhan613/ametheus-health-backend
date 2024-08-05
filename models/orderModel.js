@@ -51,6 +51,14 @@ const orderSchema = new mongoose.Schema({
     type: String,
     default: 0,
   },
+  prescriptionImage: {
+    type: String,
+    default: ""
+  },
+  passportImage: {
+    type: String,
+    default: ""
+  },
   weight: {
     type: Number,
     default: 0,
@@ -133,6 +141,10 @@ const orderSchema = new mongoose.Schema({
     default: null
   },
   deliveryPartner: {
+    type: String,
+    default: null
+  },
+  deliveryPartnerTrackingURL: {
     type: String,
     default: null
   },

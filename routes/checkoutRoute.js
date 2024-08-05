@@ -1,17 +1,17 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
+const path = require('path');
+const crypto = require('crypto');
+const fileUpload = require('express-fileupload');
 const router = express.Router();
 const Razorpay = require('razorpay');
-const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const multer = require('multer');
 const { body, validationResult } = require('express-validator');
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 
 const { calculateTotalCartPrice } = require('../utils/cartUtils');
 const Order = require('../models/orderModel');
-const User = require('../models/userModel');
 const verifyToken = require('../middlewares/auth');
 const UserModel = require('../models/userModel');
 
@@ -21,53 +21,57 @@ const razorpay = new Razorpay({
     key_secret: process.env.RZPY_KEY_SECRET_AH,
 });
 
-// Configure multer for file uploads
-const upload = multer({ storage: multer.memoryStorage() });
+const AWS = require('aws-sdk');
+router.use(fileUpload());
 
-// Configure AWS S3 for file uploads
-const s3 = new S3Client({
-    region: process.env.AWS_REGION,
-    credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    },
+const s3 = new AWS.S3({
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    region: process.env.AWS_REGION
 });
 
-// Handle file uploads to S3
-const uploadFile = async (file) => {
-    if (!file) {
-        throw new Error('No file provided');
-    }
-
-    // Validate file type and size
-    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
-    const maxSize = 10 * 1024 * 1024; // 10 MB
-
-    if (!allowedMimeTypes.includes(file.mimetype)) {
-        throw new Error('Invalid file type');
-    }
-
-    if (file.size > maxSize) {
-        throw new Error('File size exceeds limit');
-    }
-
-    const fileContent = Buffer.from(file.buffer, 'binary');
+const uploadToS3 = (buffer, key, mimeType) => {
     const params = {
         Bucket: process.env.AWS_BUCKET_NAME,
-        Key: `orderuploads/${Date.now()}_${file.originalname}`,
-        Body: fileContent,
-        ContentType: file.mimetype,
-        ACL: 'public-read',
+        Key: key,
+        Body: buffer,
+        ContentType: mimeType,
+        ACL: 'public-read'
     };
 
-    try {
-        const command = new PutObjectCommand(params);
-        await s3.send(command);
-        return `https://${params.Bucket}.s3.${process.env.AWS_REGION}.amazonaws.com/${params.Key}`;
-    } catch (error) {
-        console.error('Error uploading file to S3:', error);
-        throw new Error('File upload failed');
-    }
+    return s3.upload(params).promise();
+};
+
+const deleteFromS3 = async (key) => {
+    const params = {
+        Bucket: process.env.AWS_BUCKET_NAME,
+        Key: key,
+    };
+
+    return s3.deleteObject(params).promise();
+};
+
+const generateKey = (originalname, orderID = "") => {
+    const ext = path.extname(originalname);
+
+    const now = new Date();
+
+    // Format the date
+    const day = String(now.getDate()).padStart(2, '0');
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const month = monthNames[now.getMonth()];
+    const year = now.getFullYear();
+
+    // Format the time
+    let hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const period = hours >= 12 ? 'pm' : 'am';
+    hours = hours % 12 || 12;
+    const formattedHours = String(hours).padStart(2, '0');
+
+    const formattedDate = `${day}-${month}-${year}-${formattedHours}-${minutes}-${period}`;
+
+    return `orders/orderid-${orderID}-hash-${crypto.randomBytes(16).toString('hex')}-date-${formattedDate}${ext}`;
 };
 
 // Verify payment signature
@@ -170,9 +174,9 @@ router.post('/create-order',
                 totalCartPrice,
                 deliveryCharge,
                 totalPrice,
-                status: "Pending", // Set status to Pending initially
+                status: "Pending",
                 payment: {
-                    orderId: order.id // Save Razorpay order ID
+                    orderId: order.id
                 },
                 userID,
                 prescriptionURL,
@@ -180,8 +184,6 @@ router.post('/create-order',
             });
 
             await newOrder.save();
-
-            console.log(totalCartPrice);
 
             // Respond with order details
             res.json({
@@ -196,6 +198,69 @@ router.post('/create-order',
         }
     }
 );
+
+// Route to add a prescription image to an order
+router.post('/:id/prescription-image', verifyToken, async (req, res) => {
+    try {
+        const order = await Order.findById(req.params.id);
+        if (!order) {
+            return res.status(404).send({ msg: 'Order not found' });
+        }
+
+        // if (order.userID !== req.userDetail._id) {
+        //     return res.status(404).send({ msg: 'Order not found...' });
+        // }
+
+        const file = req.files && req.files.prescriptionImage;
+        if (!file) {
+            return res.status(400).send({ msg: 'No prescription image provided.' });
+        }
+
+        // Generate S3 key and upload to S3
+        const s3Key = generateKey(file.name, req.params.id);
+        const uploadResult = await uploadToS3(file.data, s3Key, file.mimetype);
+
+        // Update order with the new prescription image URL
+        order.prescriptionImage = uploadResult.Location;
+        await order.save();
+
+        res.status(200).send({ msg: 'Prescription image added successfully', data: order });
+    } catch (error) {
+        console.error('Error adding prescription image:', error);
+        res.status(500).send({ msg: 'Internal server error, try again later' });
+    }
+});
+
+// Route to add a passport image to an order
+router.post('/:id/passport-image', verifyToken, async (req, res) => {
+    try {
+        const order = await Order.findById(req.params.id);
+        if (!order) {
+            return res.status(404).send({ msg: 'Order not found' });
+        }
+        if (order.userID !== req.userDetail._id) {
+            return res.status(404).send({ msg: 'Order not found' });
+        }
+
+        const file = req.files && req.files.passportImage;
+        if (!file) {
+            return res.status(400).send({ msg: 'No passport image provided.' });
+        }
+
+        // Generate S3 key and upload to S3
+        const s3Key = generateKey(file.name, req.params.id);
+        const uploadResult = await uploadToS3(file.data, s3Key, file.mimetype);
+
+        // Update order with the new passport image URL
+        order.passportImage = uploadResult.Location;
+        await order.save();
+
+        res.status(200).send({ msg: 'Passport image added successfully', data: order });
+    } catch (error) {
+        console.error('Error adding passport image:', error);
+        res.status(500).send({ msg: 'Internal server error, try again later' });
+    }
+});
 
 // Handle payment callback
 router.post('/payment-callback',

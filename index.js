@@ -191,7 +191,6 @@ cron.schedule('0 */6 * * *', fetchAndUpdateRates);
 const privateKey = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/privkey.pem', 'utf8');
 const certificate = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/cert.pem', 'utf8');
 const credentials = { key: privateKey, cert: certificate };
-
 // Starting HTTPS Server
 const httpsServer = https.createServer(credentials, app);
 
