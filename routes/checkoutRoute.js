@@ -136,6 +136,8 @@ router.post('/create-order',
             let prescriptionImage = '';
             let passportImage = '';
 
+            console.log(+totalCartPrice);
+
 
             // Create Razorpay order
             const order = await createOrder(+totalCartPrice, currency);
