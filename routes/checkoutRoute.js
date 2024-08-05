@@ -136,11 +136,11 @@ router.post('/create-order',
             let prescriptionImage = '';
             let passportImage = '';
 
-            console.log(+totalCartPrice.replace('.',''));
+            console.log((+totalCartPrice)*100);
 
 
             // Create Razorpay order
-            const order = await createOrder(+totalCartPrice.replace('.',''), currency);
+            const order = await createOrder(((+totalCartPrice)*100), currency);
             console.log(order.id);
 
             // Save the order details in the database
