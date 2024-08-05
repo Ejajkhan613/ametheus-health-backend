@@ -310,7 +310,7 @@ router.get('/admin/orders', verifyToken, async (req, res) => {
         const orders = await Order.find(filter)
             .skip(skip)
             .limit(parseInt(limit))
-            .sort({ timeStamp: -1 });
+            .sort({ modifiedAt: -1 });
 
         const totalOrders = await Order.countDocuments(filter);
 
