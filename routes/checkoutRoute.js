@@ -179,8 +179,8 @@ router.post('/create-order',
                     orderId: order.id
                 },
                 userID,
-                prescriptionURL,
-                passportURL
+                prescriptionImage,
+                passportImage
             });
 
             await newOrder.save();
