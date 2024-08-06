@@ -314,7 +314,7 @@ productRoute.patch('/:id', verifyToken, async (req, res) => {
         if (!product) {
             return res.status(404).send({ msg: 'Product not found' });
         }
-        res.status(200).send({ msg: 'Product updated successfully', data: product });
+        res.status(201).send({ msg: 'Product updated successfully', data: product });
     } catch (error) {
         console.error('Error updating product:', error);
         res.status(500).send({ msg: 'Internal server error, try again later' });
@@ -551,24 +551,21 @@ productRoute.get('/', async (req, res) => {
             sortBy = 'title', order = 'asc', country = 'INDIA', currency = 'INR'
         } = req.query;
 
-        const regex = new RegExp(search, 'i');
-
         if (search) {
             filters.$or = [
-                { title: { $regex: regex } },
-                { slug: { $regex: regex } },
-                { 'variants.sku': { $regex: regex } },
-                { treatment: { $regex: regex } },
-                { generic: { $regex: regex } },
-                { tags: { $regex: regex } },
-                { originCountry: { $regex: regex } }
+                { title: new RegExp(search, 'i') },
+                { slug: new RegExp(search, 'i') },
+                { treatment: new RegExp(search, 'i') },
+                { originCountry: new RegExp(search, 'i') },
+                { tags: new RegExp(search, 'i') },
+                { 'variants.sku': new RegExp(search, 'i') },
+                { 'variants.packSize': new RegExp(search, 'i') }
             ];
-
             if (isValidObjectId(search)) {
-                filters.$or.push({ _id: search });
+                filters.$or.push({ genericID: search });
                 filters.$or.push({ categoryID: { $in: [search] } });
-                filters.$or.push({ categoryID: search });
                 filters.$or.push({ manufacturerID: search });
+                filters.$or.push({ _id: search });
             }
         }
 
