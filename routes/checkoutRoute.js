@@ -166,7 +166,7 @@ router.post('/create-order', verifyToken, async (req, res) => {
         console.log(paisaAmount)
 
         // Create Razorpay order
-        const order = await createOrder((+paisaAmount), currency);
+        const order = await createOrder(paisaAmount, currency);
 
         // Save the order details in the database
         const newOrder = new Order({
