@@ -136,6 +136,7 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
         let totalPrice = (parseFloat(totalPriceInINR) * exchangeRate.rate).toFixed(2);
         deliveryChargeInCurrency = parseFloat(deliveryChargeInCurrency).toFixed(2);
 
+        console.log(totalCartPriceInCurrency);
         // Return the results
         return {
             requiresPrescription,

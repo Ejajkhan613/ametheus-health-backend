@@ -93,101 +93,124 @@ const createOrder = async (totalCartPrice, currency) => {
 };
 
 // Create Order Route
-router.post('/create-order',
-    verifyToken,
-    [
-        body('name').isString().notEmpty(),
-        body('companyName').isString().optional(),
-        body('country').isString().notEmpty(),
-        body('streetAddress').isString().notEmpty(),
-        body('city').isString().notEmpty(),
-        body('state').isString().notEmpty(),
-        body('pincode').isString().notEmpty(),
-        body('mobile').isString().notEmpty(),
-        body('email').isEmail().notEmpty(),
-        body('age').isInt({ min: 0 }).notEmpty(),
-        body('bloodPressure').isString().optional(),
-        body('orderNotes').isString().optional(),
-        body('currency').isIn(['INR', 'USD', 'EUR', 'GBP', 'AED', 'RUB']).notEmpty()
-    ],
-    async (req, res) => {
-        console.log(req.body);
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
+router.post('/create-order', verifyToken, async (req, res) => {
+    try {
+        const {
+            name, companyName = "", country, streetAddress, city, state, pincode, mobile, email, age, bloodPressure, weight, weightUnit,
+            orderNotes, currency
+        } = req.body;
+
+        if (!name) {
+            return res.status(404).send({ "msg": "name is missing" })
         }
 
-        try {
-            const {
-                name, companyName, country, streetAddress, city, state, pincode, mobile, email, age, bloodPressure, weight, weightUnit,
-                orderNotes, currency
-            } = req.body;
-
-            const userID = req.userDetail._id;
-
-            // Fetch cart details for the user
-            const cartDetails = await calculateTotalCartPrice(userID, country, currency);
-            if (!cartDetails) {
-                return res.status(400).send('Unable to calculate cart details');
-            }
-
-            let { requiresPrescription, products, totalCartPrice, deliveryCharge, totalPrice } = cartDetails;
-
-            let prescriptionImage = '';
-            let passportImage = '';
-
-            console.log((+totalCartPrice)*100);
-
-
-            // Create Razorpay order
-            const order = await createOrder(+totalCartPrice, currency);
-
-            // Save the order details in the database
-            const newOrder = new Order({
-                name,
-                companyName,
-                country,
-                streetAddress,
-                city,
-                state,
-                pincode,
-                mobile,
-                email,
-                age,
-                bloodPressure,
-                weight,
-                weightUnit,
-                orderNotes,
-                products,
-                currency,
-                totalCartPrice,
-                deliveryCharge,
-                totalPrice,
-                status: "Pending",
-                payment: {
-                    orderId: order.id
-                },
-                userID,
-                prescriptionImage,
-                passportImage
-            });
-
-            await newOrder.save();
-
-            // Respond with order details
-            res.json({
-                _id: newOrder._id,
-                orderId: order.id,
-                currency,
-                amount: totalCartPrice, // Send amount in smallest currency sub-unit
-                key_id: process.env.RZPY_KEY_ID_AH
-            });
-        } catch (error) {
-            console.log(error);
-            console.error('Error creating order:', error);
-            res.status(500).send('Internal Server Error');
+        if (!country) {
+            return res.status(404).send({ "msg": "country is missing" })
         }
+
+        if (!streetAddress) {
+            return res.status(404).send({ "msg": "streetAddress is missing" })
+        }
+
+        if (!city) {
+            return res.status(404).send({ "msg": "city is missing" })
+        }
+
+        if (!state) {
+            return res.status(404).send({ "msg": "state is missing" })
+        }
+
+        if (!pincode) {
+            return res.status(404).send({ "msg": "pincode is missing" })
+        }
+
+        if (!mobile) {
+            return res.status(404).send({ "msg": "mobile is missing" })
+        }
+
+        if (!email) {
+            return res.status(404).send({ "msg": "email is missing" })
+        }
+
+        if (age && age <= 0) {
+            return res.status(404).send({ "msg": "age is wrong" })
+        }
+
+        if (bloodPressure && (bloodPressure <= 0 || bloodPressure >= 500)) {
+            return res.status(404).send({ "msg": "age is wrong" })
+        }
+
+        let validCurrencies = ["INR", "USD", "EUR", "GBP", "AED", "RUB"]
+        if (!currency) {
+            return res.status(404).send({ "msg": "currency is missing" })
+        }
+
+        if (!validCurrencies.includes(currency)) {
+            return res.status(404).send({ "msg": "currency is missing" })
+        }
+
+        const userID = req.userDetail._id;
+
+        // Fetch cart details for the user
+        const cartDetails = await calculateTotalCartPrice(userID, country, currency);
+        if (!cartDetails) {
+            return res.status(400).send('Unable to calculate cart details');
+        }
+
+        let { products, totalCartPrice, deliveryCharge, totalPrice } = cartDetails;
+
+        let prescriptionImage = '';
+        let passportImage = '';
+
+        // Create Razorpay order
+        const order = await createOrder(+totalCartPrice, currency);
+
+        // Save the order details in the database
+        const newOrder = new Order({
+            name,
+            companyName,
+            country,
+            streetAddress,
+            city,
+            state,
+            pincode,
+            mobile,
+            email,
+            age,
+            bloodPressure,
+            weight,
+            weightUnit,
+            orderNotes,
+            products,
+            currency,
+            totalCartPrice,
+            deliveryCharge,
+            totalPrice,
+            status: "Pending",
+            payment: {
+                orderId: order.id
+            },
+            userID,
+            prescriptionImage,
+            passportImage
+        });
+
+        await newOrder.save();
+
+        // Respond with order details
+        res.json({
+            _id: newOrder._id,
+            orderId: order.id,
+            currency,
+            amount: totalCartPrice,
+            key_id: process.env.RZPY_KEY_ID_AH
+        });
+    } catch (error) {
+        console.log(error);
+        console.error('Error creating order:', error);
+        res.status(500).send('Internal Server Error');
     }
+}
 );
 
 // Route to add a prescription image to an order
