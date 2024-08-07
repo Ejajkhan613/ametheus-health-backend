@@ -175,22 +175,76 @@ manufacturerRouter.get('/names', async (req, res) => {
     }
 });
 
-// Get a manufacturer by ID
+// Get a manufacturer by ID (currency and country added)
 manufacturerRouter.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
+        const { currency = 'INR', country = 'INDIA' } = req.query;
+
+        // Fetch the manufacturer
         const manufacturer = await ManufacturerModel.findById(id).select('-__v').lean();
         if (!manufacturer) {
             return res.status(404).json({ msg: 'Manufacturer not found' });
         }
-        const products = await ProductModel.find({ manufacturerID: id });
+
+        // Fetch products associated with the manufacturer
+        const products = await ProductModel.find({ manufacturerID: id }).lean();
+
+        // Fetch exchange rate based on user's selected currency
+        let exchangeRate = { rate: 1 };
+        let currencySymbol = "₹";
+
+        if (currency !== 'INR') {
+            const foundExchangeRate = await ExchangeRate.findOne({ currency });
+            if (foundExchangeRate) {
+                exchangeRate = foundExchangeRate;
+                currencySymbol = foundExchangeRate.symbol || currency;
+            } else {
+                return res.status(400).json({ msg: 'Currency not supported' });
+            }
+        }
+
+        // Adjust product prices based on exchange rate and country
+        products.forEach(product => {
+            product.variants.forEach(variant => {
+                let price = variant.price || 0;
+                let salePrice = variant.salePrice || 0;
+                const marginPercentage = variant.margin / 100 || 0.01;
+
+                // Apply country-specific margin
+                if (country === 'INDIA') {
+                    const discount = 12 / 100;
+                    price = Number((price * (1 - discount)).toFixed(2));
+                    salePrice = Number((salePrice * (1 - discount)).toFixed(2));
+                } else if (['BANGLADESH', 'NEPAL'].includes(country)) {
+                    const margin = 20 / 100;
+                    price = Number((price + (price * margin)).toFixed(2));
+                    salePrice = Number((salePrice + (salePrice * margin)).toFixed(2));
+                } else {
+                    price = Number((price + (price * marginPercentage)).toFixed(2));
+                    salePrice = Number((salePrice + (salePrice * marginPercentage)).toFixed(2));
+                }
+
+                // Convert prices to the selected currency
+                price = Number((price * exchangeRate.rate).toFixed(2));
+                salePrice = Number((salePrice * exchangeRate.rate).toFixed(2));
+
+                variant.price = price;
+                variant.salePrice = salePrice;
+                variant.currencyCode = currency;
+                variant.currency = currencySymbol;
+            });
+        });
+
         manufacturer.products = products;
+
         res.status(200).json({ msg: 'Success', data: manufacturer });
     } catch (error) {
         console.error('Error fetching manufacturer:', error);
         res.status(500).json({ msg: 'Internal server error, try again later' });
     }
 });
+
 
 // Remove or update a manufacturerID of a specific product
 manufacturerRouter.post('/rmid', verifyToken, async (req, res) => {
@@ -248,10 +302,13 @@ manufacturerRouter.delete('/:id', verifyToken, async (req, res) => {
     }
 });
 
-// Get all products for a specific manufacturer (currency added)
+// Get all products for a specific manufacturer (currency and country added)
 manufacturerRouter.get('/:id/product', async (req, res) => {
     try {
         const manufacturerID = req.params.id;
+        const { country = 'INDIA', currency = 'INR' } = req.query;
+
+        // Fetch the manufacturer
         const manufacturer = await ManufacturerModel.findById(manufacturerID);
         if (!manufacturer) {
             return res.status(404).json({ msg: 'Manufacturer not found' });
@@ -261,14 +318,11 @@ manufacturerRouter.get('/:id/product', async (req, res) => {
         let exchangeRate = { rate: 1 };
         let currencySymbol = "₹";
 
-        const country = req.query.country || 'INDIA';
-        const currency = req.query.currency || 'INR';
-
         if (currency !== 'INR') {
             const foundExchangeRate = await ExchangeRate.findOne({ currency });
             if (foundExchangeRate) {
                 exchangeRate = foundExchangeRate;
-                currencySymbol = exchangeRate.symbol || currency;
+                currencySymbol = foundExchangeRate.symbol || currency;
             } else {
                 return res.status(400).json({ msg: 'Currency not supported' });
             }
@@ -285,21 +339,20 @@ manufacturerRouter.get('/:id/product', async (req, res) => {
                 const margin = variant.margin / 100 || 0.01;
 
                 if (country === 'INDIA') {
-                    if (exchangeRate.rate !== 1) { // Currency other than INR
-                        variant.price = Number((indianMRP * exchangeRate.rate).toFixed(2));
-                        variant.salePrice = Number((indianSaleMRP * exchangeRate.rate).toFixed(2));
-                    } else {
-                        variant.price = Number(indianMRP.toFixed(2));
-                        variant.salePrice = Number(indianSaleMRP.toFixed(2));
-                    }
-                } else { // OUTSIDE INDIA
+                    // If currency is INR, no need for additional conversion
+                    variant.price = Number((indianMRP * exchangeRate.rate).toFixed(2));
+                    variant.salePrice = Number((indianSaleMRP * exchangeRate.rate).toFixed(2));
+                } else { // For other countries
                     const priceWithMargin = indianMRP * (1 + margin);
                     const salePriceWithMargin = indianSaleMRP * (1 + margin);
 
+                    // Convert prices to the selected currency
                     variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
                     variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
                 }
-                variant.currency = currencySymbol; // Set the currency symbol
+
+                // Set the currency symbol
+                variant.currency = currencySymbol;
             });
         });
 
@@ -309,5 +362,6 @@ manufacturerRouter.get('/:id/product', async (req, res) => {
         res.status(500).json({ msg: 'Internal server error, try again later' });
     }
 });
+
 
 module.exports = manufacturerRouter;

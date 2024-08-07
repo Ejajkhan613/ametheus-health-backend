@@ -41,9 +41,27 @@ const deleteFromS3 = async (key) => {
     return s3.deleteObject(params).promise();
 };
 
-const generateKey = (originalname) => {
+const generateKey = (originalname, productID = "") => {
     const ext = path.extname(originalname);
-    return `products/${crypto.randomBytes(16).toString('hex')}${ext}`;
+
+    const now = new Date();
+
+    // Format the date
+    const day = String(now.getDate()).padStart(2, '0');
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const month = monthNames[now.getMonth()];
+    const year = now.getFullYear();
+
+    // Format the time
+    let hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const period = hours >= 12 ? 'pm' : 'am';
+    hours = hours % 12 || 12;
+    const formattedHours = String(hours).padStart(2, '0');
+
+    const formattedDate = `${day}-${month}-${year}-${formattedHours}-${minutes}-${period}`;
+
+    return `products/productid-${productID}-hash-${crypto.randomBytes(16).toString('hex')}-date-${formattedDate}${ext}`;
 };
 
 const productRoute = express.Router();
@@ -127,6 +145,7 @@ productRoute.post('/import', verifyToken, async (req, res) => {
             faq: row.FAQ,
             additionalInformation: row.AdditionalInformation,
             moreInformation: row.MoreInformation,
+            manufacturer: row.Manufacturer,
             purchaseNote: row.PurchaseNote,
             categoryID: row.CategoryID && row.categoryID !== "" ? row.CategoryID.split(',').map(id => id.trim()) : [],
             tags: row.Tags,
@@ -188,6 +207,7 @@ productRoute.get('/export', verifyToken, async (req, res) => {
                 FAQ: product.faq,
                 AdditionalInformation: product.additionalInformation,
                 MoreInformation: product.moreInformation,
+                Manufacturer: product.manufacturer,
                 PurchaseNote: product.purchaseNote,
                 CategoryID: product.categoryID.join(','),
                 Tags: product.tags,
@@ -343,7 +363,7 @@ productRoute.post('/:id/images', verifyToken, async (req, res) => {
 
         // Upload new images to S3
         const uploadPromises = imagesArray.map(async (file) => {
-            const s3Key = generateKey(file.name);
+            const s3Key = generateKey(file.name, req.params.id);
             const uploadResult = await uploadToS3(file.data, s3Key, file.mimetype);
             return { url: uploadResult.Location, key: s3Key, alt: file.name };
         });
@@ -505,26 +525,31 @@ productRoute.get('/search/', async (req, res) => {
         // Adjust product prices based on exchange rate and country selection
         products.forEach(product => {
             product.variants.forEach(variant => {
-                const indianMRP = variant.price || 0;
-                const indianSaleMRP = variant.salePrice || 0;
-                const margin = variant.margin / 100 || 0.01;
+                let price = variant.price || 0;
+                let salePrice = variant.salePrice || 0;
+                const marginPercentage = variant.margin / 100 || 0.01;
 
                 if (country === 'INDIA') {
-                    if (exchangeRate.rate !== 1) { // Currency other than INR
-                        variant.price = Number((indianMRP * exchangeRate.rate).toFixed(2));
-                        variant.salePrice = Number((indianSaleMRP * exchangeRate.rate).toFixed(2));
-                    } else {
-                        variant.price = Number(indianMRP.toFixed(2));
-                        variant.salePrice = Number(indianSaleMRP.toFixed(2));
-                    }
-                } else { // OUTSIDE INDIA
-                    const priceWithMargin = indianMRP * (1 + margin);
-                    const salePriceWithMargin = indianSaleMRP * (1 + margin);
-
-                    variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
-                    variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
+                    const discount = 12 / 100;
+                    price = Number((price * (1 - discount)).toFixed(2));
+                    salePrice = Number((salePrice * (1 - discount)).toFixed(2));
+                } else if (['BANGLADESH', 'NEPAL'].includes(country)) {
+                    const margin = 20 / 100;
+                    price = Number((price + (price * margin)).toFixed(2));
+                    salePrice = Number((salePrice + (salePrice * margin)).toFixed(2));
+                } else {
+                    price = Number((price + (price * marginPercentage)).toFixed(2));
+                    salePrice = Number((salePrice + (salePrice * marginPercentage)).toFixed(2));
                 }
-                variant.currency = currencySymbol; // Set the currency symbol
+
+                // Convert prices to the selected currency
+                price = Number((price * exchangeRate.rate).toFixed(2));
+                salePrice = Number((salePrice * exchangeRate.rate).toFixed(2));
+
+                variant.price = price;
+                variant.salePrice = salePrice;
+                variant.currencyCode = currency;
+                variant.currency = currencySymbol;
             });
         });
 
@@ -546,10 +571,18 @@ productRoute.get('/', async (req, res) => {
         const skip = (page - 1) * limit;
 
         const filters = { isVisible: true };
-        const {
+        let {
             search, minPrice, maxPrice, packSize, isVisible,
-            sortBy = 'title', order = 'asc', country = 'INDIA', currency = 'INR'
+            sortBy = 'title', order = 'asc', country, currency
         } = req.query;
+
+        if (country == "null" || country == "undefined" || country == null || country == undefined) {
+            country = 'INDIA';
+        }
+
+        if (currency == "null" || currency == "undefined" || currency == null || currency == undefined) {
+            currency = 'INR';
+        }
 
         if (search) {
             filters.$or = [
@@ -598,7 +631,7 @@ productRoute.get('/', async (req, res) => {
             }
         }
 
-        const products = await ProductModel.find(filters)
+        let products = await ProductModel.find(filters)
             .skip(skip)
             .limit(limit)
             .sort(sortOptions)
@@ -608,25 +641,33 @@ productRoute.get('/', async (req, res) => {
         // Adjust product prices based on exchange rate and country selection
         products.forEach(product => {
             product.variants.forEach(variant => {
-                const indianMRP = variant.price || 0;
-                const indianSaleMRP = variant.salePrice || 0;
-                const margin = variant.margin / 100 || 0.01; // Default margin is 1% if not provided
+                let price = variant.price || 0;
+                let salePrice = variant.salePrice || 0;
+                const marginPercentage = variant.margin / 100 || 0.01;
 
                 if (country === 'INDIA') {
-                    if (exchangeRate.rate !== 1) {
-                        variant.price = Number((indianMRP * exchangeRate.rate).toFixed(2));
-                        variant.salePrice = Number((indianSaleMRP * exchangeRate.rate).toFixed(2));
-                    } else {
-                        variant.price = Number(indianMRP.toFixed(2));
-                        variant.salePrice = Number(indianSaleMRP.toFixed(2));
-                    }
+                    const discount = 12 / 100;
+                    price = Number((price * (1 - discount)).toFixed(2));
+                    salePrice = Number((salePrice * (1 - discount)).toFixed(2));
+                } else if (['BANGLADESH', 'NEPAL'].includes(country)) {
+                    const margin = 20 / 100;
+                    price = Number((price + (price * margin)).toFixed(2));
+                    salePrice = Number((salePrice + (salePrice * margin)).toFixed(2));
                 } else {
-                    const priceWithMargin = indianMRP * (1 + margin);
-                    const salePriceWithMargin = indianSaleMRP * (1 + margin);
-
-                    variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
-                    variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
+                    price = Number((price + (price * marginPercentage)).toFixed(2));
+                    salePrice = Number((salePrice + (salePrice * marginPercentage)).toFixed(2));
                 }
+
+                // Convert prices to the selected currency
+                price = Number((price * exchangeRate.rate).toFixed(2));
+                salePrice = Number((salePrice * exchangeRate.rate).toFixed(2));
+
+                console.log(price)
+                console.log(salePrice)
+
+                variant.price = price;
+                variant.salePrice = salePrice;
+                variant.currencyCode = currency;
                 variant.currency = currencySymbol;
             });
         });
@@ -675,27 +716,33 @@ productRoute.get('/:id', async (req, res) => {
 
         // Adjust product prices based on exchange rate and country selection
         product.variants.forEach(variant => {
-            const indianMRP = variant.price || 0;
-            const indianSaleMRP = variant.salePrice || 0;
-            const margin = variant.margin / 100 || 0.01;
+            let price = variant.price || 0;
+            let salePrice = variant.salePrice || 0;
+            const marginPercentage = variant.margin / 100 || 0.01;
 
             if (country === 'INDIA') {
-                if (exchangeRate.rate !== 1) { // Currency other than INR
-                    variant.price = Number((indianMRP * exchangeRate.rate).toFixed(2));
-                    variant.salePrice = Number((indianSaleMRP * exchangeRate.rate).toFixed(2));
-                } else {
-                    variant.price = Number(indianMRP.toFixed(2));
-                    variant.salePrice = Number(indianSaleMRP.toFixed(2));
-                }
-            } else { // OUTSIDE INDIA
-                const priceWithMargin = indianMRP * (1 + margin);
-                const salePriceWithMargin = indianSaleMRP * (1 + margin);
-
-                variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
-                variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
+                const discount = 12 / 100;
+                price = Number((price * (1 - discount)).toFixed(2));
+                salePrice = Number((salePrice * (1 - discount)).toFixed(2));
+            } else if (['BANGLADESH', 'NEPAL'].includes(country)) {
+                const margin = 20 / 100;
+                price = Number((price + (price * margin)).toFixed(2));
+                salePrice = Number((salePrice + (salePrice * margin)).toFixed(2));
+            } else {
+                price = Number((price + (price * marginPercentage)).toFixed(2));
+                salePrice = Number((salePrice + (salePrice * marginPercentage)).toFixed(2));
             }
-            variant.currency = currencySymbol; // Set the currency symbol
+
+            // Convert prices to the selected currency
+            price = Number((price * exchangeRate.rate).toFixed(2));
+            salePrice = Number((salePrice * exchangeRate.rate).toFixed(2));
+
+            variant.price = price;
+            variant.salePrice = salePrice;
+            variant.currencyCode = currency;
+            variant.currency = currencySymbol;
         });
+
 
         res.status(200).send({ msg: 'Success', data: product });
     } catch (error) {
@@ -732,26 +779,31 @@ productRoute.get('/category/:id', async (req, res) => {
         // Adjust product prices based on exchange rate and country selection
         products.forEach(product => {
             product.variants.forEach(variant => {
-                const indianMRP = variant.price || 0;
-                const indianSaleMRP = variant.salePrice || 0;
-                const margin = variant.margin / 100 || 0.01;
+                let price = variant.price || 0;
+                let salePrice = variant.salePrice || 0;
+                const marginPercentage = variant.margin / 100 || 0.01;
 
                 if (country === 'INDIA') {
-                    if (exchangeRate.rate !== 1) { // Currency other than INR
-                        variant.price = Number((indianMRP * exchangeRate.rate).toFixed(2));
-                        variant.salePrice = Number((indianSaleMRP * exchangeRate.rate).toFixed(2));
-                    } else {
-                        variant.price = Number(indianMRP.toFixed(2));
-                        variant.salePrice = Number(indianSaleMRP.toFixed(2));
-                    }
-                } else { // OUTSIDE INDIA
-                    const priceWithMargin = indianMRP * (1 + margin);
-                    const salePriceWithMargin = indianSaleMRP * (1 + margin);
-
-                    variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
-                    variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
+                    const discount = 12 / 100;
+                    price = Number((price * (1 - discount)).toFixed(2));
+                    salePrice = Number((salePrice * (1 - discount)).toFixed(2));
+                } else if (['BANGLADESH', 'NEPAL'].includes(country)) {
+                    const margin = 20 / 100;
+                    price = Number((price + (price * margin)).toFixed(2));
+                    salePrice = Number((salePrice + (salePrice * margin)).toFixed(2));
+                } else {
+                    price = Number((price + (price * marginPercentage)).toFixed(2));
+                    salePrice = Number((salePrice + (salePrice * marginPercentage)).toFixed(2));
                 }
-                variant.currency = currencySymbol; // Set the currency symbol
+
+                // Convert prices to the selected currency
+                price = Number((price * exchangeRate.rate).toFixed(2));
+                salePrice = Number((salePrice * exchangeRate.rate).toFixed(2));
+
+                variant.price = price;
+                variant.salePrice = salePrice;
+                variant.currencyCode = currency;
+                variant.currency = currencySymbol;
             });
         });
 
@@ -789,27 +841,33 @@ productRoute.get('/slug/:slug', async (req, res) => {
 
         // Adjust product prices based on exchange rate and country selection
         product.variants.forEach(variant => {
-            const indianMRP = variant.price || 0;
-            const indianSaleMRP = variant.salePrice || 0;
-            const margin = variant.margin / 100 || 0.01;
+            let price = variant.price || 0;
+            let salePrice = variant.salePrice || 0;
+            const marginPercentage = variant.margin / 100 || 0.01;
 
             if (country === 'INDIA') {
-                if (exchangeRate.rate !== 1) { // Currency other than INR
-                    variant.price = Number((indianMRP * exchangeRate.rate).toFixed(2));
-                    variant.salePrice = Number((indianSaleMRP * exchangeRate.rate).toFixed(2));
-                } else {
-                    variant.price = Number(indianMRP.toFixed(2));
-                    variant.salePrice = Number(indianSaleMRP.toFixed(2));
-                }
-            } else { // OUTSIDE INDIA
-                const priceWithMargin = indianMRP * (1 + margin);
-                const salePriceWithMargin = indianSaleMRP * (1 + margin);
-
-                variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
-                variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
+                const discount = 12 / 100;
+                price = Number((price * (1 - discount)).toFixed(2));
+                salePrice = Number((salePrice * (1 - discount)).toFixed(2));
+            } else if (['BANGLADESH', 'NEPAL'].includes(country)) {
+                const margin = 20 / 100;
+                price = Number((price + (price * margin)).toFixed(2));
+                salePrice = Number((salePrice + (salePrice * margin)).toFixed(2));
+            } else {
+                price = Number((price + (price * marginPercentage)).toFixed(2));
+                salePrice = Number((salePrice + (salePrice * marginPercentage)).toFixed(2));
             }
-            variant.currency = currencySymbol; // Set the currency symbol
+
+            // Convert prices to the selected currency
+            price = Number((price * exchangeRate.rate).toFixed(2));
+            salePrice = Number((salePrice * exchangeRate.rate).toFixed(2));
+
+            variant.price = price;
+            variant.salePrice = salePrice;
+            variant.currencyCode = currency;
+            variant.currency = currencySymbol;
         });
+
 
         res.status(200).send({ msg: 'Success', data: product });
     } catch (error) {
@@ -818,20 +876,20 @@ productRoute.get('/slug/:slug', async (req, res) => {
     }
 });
 
-// productRoute.get('/change/update', async (req, res) => {
-//     try {
-//         // Update all products to set `isStockAvailable` to true in all variants
-//         const result = await ProductModel.updateMany(
-//             {},
-//             { $set: { "variants.$[elem].isStockAvailable": true, "isVisible": true } },
-//             { arrayFilters: [{ "elem.isStockAvailable": { $ne: true } }], multi: true }
-//         );
-//         let count = result.modifiedCount;
-//         return res.status(200).send({ "msg": "Data Updated", count });
-//     } catch (error) {
-//         console.error(error);
-//         return res.status(500).send({ 'msg': "Error", error });
-//     }
-// });
+productRoute.get('/change/update', async (req, res) => {
+    try {
+        // Update all products to set `isStockAvailable` to true in all variants
+        const result = await ProductModel.updateMany(
+            {},
+            { $set: { "variants.$[elem].isStockAvailable": true, "isVisible": true } },
+            { arrayFilters: [{ "elem.isStockAvailable": { $ne: true } }], multi: true }
+        );
+        let count = result.modifiedCount;
+        return res.status(200).send({ "msg": "Data Updated", count });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).send({ 'msg': "Error", error });
+    }
+});
 
 module.exports = productRoute;

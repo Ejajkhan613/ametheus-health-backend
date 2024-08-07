@@ -34,7 +34,9 @@ const upload = multer({
             cb(null, { fieldName: file.fieldname });
         },
         key: function (req, file, cb) {
-            cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+            const categoryFolder = req.query.id ? '/category' + "categoryid-" + req.query.id : '/category';
+            const fileName = file.fieldname + '-' + Date.now() + path.extname(file.originalname);
+            cb(null, categoryFolder + fileName);
         }
     }),
     limits: { fileSize: 1000 * 1024 * 1024 }, // 1GB limit

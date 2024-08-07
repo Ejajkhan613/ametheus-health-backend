@@ -8,7 +8,15 @@ const ExchangeRate = require('../models/currencyPriceModel');
 
 // Route to process multiple products (Not Authorized)
 router.post('/batch', async (req, res) => {
-    const { itemss, country = "INDIA", currency = "INR" } = req.body;
+    let { itemss, country = "INDIA", currency = "INR" } = req.body;
+
+    if (country == "null" || country == "undefined" || country == null || country == undefined) {
+        country = 'INDIA';
+    }
+
+    if (currency == "null" || currency == "undefined" || currency == null || currency == undefined) {
+        currency = 'INR';
+    }
 
     try {
         // Fetch exchange rate for the selected currency if it's not INR

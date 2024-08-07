@@ -175,6 +175,10 @@ const productSchema = new mongoose.Schema({
         type: Number,
         default: null
     },
+    manufacturer: {
+        type: String,
+        default: ""
+    },
     manufacturerID: {
         type: String,
         default: ""

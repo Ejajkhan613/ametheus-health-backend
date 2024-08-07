@@ -91,7 +91,6 @@ genericRoute.get('/', async (req, res) => {
     }
 });
 
-
 // GET all generics with optional search by name or ID
 genericRoute.get('/names', verifyToken, async (req, res) => {
     try {
@@ -151,25 +150,26 @@ genericRoute.post('/rmid', verifyToken, async (req, res) => {
 genericRoute.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
+        const { country = 'INDIA', currency = 'INR' } = req.query;
+
+        // Fetch the generic by ID
         const generic = await GenericModel.findById(id).lean();
         if (!generic) {
             return res.status(404).json({ msg: 'Generic not found' });
         }
 
+        // Fetch products associated with the genericID
         const products = await ProductModel.find({ genericID: id }).lean();
 
         // Fetch exchange rate based on user's selected currency
         let exchangeRate = { rate: 1 };
         let currencySymbol = "₹";
 
-        const country = req.query.country || 'INDIA';
-        const currency = req.query.currency || 'INR';
-
         if (currency !== 'INR') {
             const foundExchangeRate = await ExchangeRate.findOne({ currency });
             if (foundExchangeRate) {
                 exchangeRate = foundExchangeRate;
-                currencySymbol = exchangeRate.symbol || currency;
+                currencySymbol = foundExchangeRate.symbol || currency;
             } else {
                 return res.status(400).json({ msg: 'Currency not supported' });
             }
@@ -183,32 +183,33 @@ genericRoute.get('/:id', async (req, res) => {
                 const margin = variant.margin / 100 || 0.01;
 
                 if (country === 'INDIA') {
-                    if (exchangeRate.rate !== 1) { // Currency other than INR
-                        variant.price = Number((indianMRP * exchangeRate.rate).toFixed(2));
-                        variant.salePrice = Number((indianSaleMRP * exchangeRate.rate).toFixed(2));
-                    } else {
-                        variant.price = Number(indianMRP.toFixed(2));
-                        variant.salePrice = Number(indianSaleMRP.toFixed(2));
-                    }
-                } else { // OUTSIDE INDIA
+                    // If currency is INR, no need for additional conversion
+                    variant.price = Number((indianMRP * exchangeRate.rate).toFixed(2));
+                    variant.salePrice = Number((indianSaleMRP * exchangeRate.rate).toFixed(2));
+                } else { // For other countries
                     const priceWithMargin = indianMRP * (1 + margin);
                     const salePriceWithMargin = indianSaleMRP * (1 + margin);
 
+                    // Convert prices to the selected currency
                     variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
                     variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
                 }
+
+                // Set the currency symbol
                 variant.currency = currencySymbol;
             });
         });
 
+        // Attach products to the generic object
         generic.products = products;
 
-        return res.status(200).json({ msg: 'Success', data: generic });
+        res.status(200).json({ msg: 'Success', data: generic });
     } catch (error) {
         console.error('Error fetching generic:', error);
-        return res.status(500).json({ msg: 'Internal server error, try again later' });
+        res.status(500).json({ msg: 'Internal server error, try again later' });
     }
 });
+
 
 // POST a new generic
 genericRoute.post('/', validateGeneric, verifyToken, async (req, res) => {

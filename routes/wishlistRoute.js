@@ -65,45 +65,64 @@ wishlistRoute.delete('/', verifyToken, async (req, res) => {
     }
 });
 
-// Get user's wishlist (currency added)
+// Get user's wishlist (currency and country added)
 wishlistRoute.get('/', verifyToken, async (req, res) => {
     const userID = req.userDetail._id;
 
     try {
-        const wishlist = await WishlistItem.findOne({ userID }).populate('items.productID').populate('items.variantID');
+        const wishlist = await WishlistItem.findOne({ userID })
+            .populate('items.productID')
+            .populate('items.variantID');
+
         if (!wishlist) {
             return res.status(404).json({ msg: 'Wishlist not found' });
         }
 
-        // Fetch exchange rate based on user's country and convert prices
+        let { currency = 'INR', country = 'INDIA' } = req.query;
         let exchangeRate = { rate: 1 };
         let currencySymbol = "₹";
 
-        if (req.query.currency && req.query.currency !== 'INR') {
-            const foundExchangeRate = await ExchangeRate.findOne({ currency: req.query.currency });
+        if (currency !== 'INR') {
+            const foundExchangeRate = await ExchangeRate.findOne({ currency });
             if (foundExchangeRate) {
                 exchangeRate = foundExchangeRate;
-                currencySymbol = exchangeRate.symbol || req.query.currency;
+                currencySymbol = foundExchangeRate.symbol || currency;
             } else {
                 return res.status(400).json({ msg: 'Currency not supported' });
             }
         }
 
-        // Adjust prices in wishlist items based on exchange rate
+        // Adjust prices in wishlist items based on exchange rate and country
         wishlist.items.forEach(item => {
-            const indianMRP = item.productID.variants.find(v => v._id.equals(item.variantID)).price || 0;
-            const indianSaleMRP = item.productID.variants.find(v => v._id.equals(item.variantID)).salePrice || 0;
-            const margin = item.productID.variants.find(v => v._id.equals(item.variantID)).margin / 100 || 0.01;
+            const variant = item.productID.variants.find(v => v._id.equals(item.variantID));
 
-            if (exchangeRate.rate !== 1) { // Not INR
-                const priceWithMargin = indianMRP * (1 + margin);
-                const salePriceWithMargin = indianSaleMRP * (1 + margin);
-                item.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
-                item.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
-            } else { // For INR
-                item.price = Number(indianMRP.toFixed(2));
-                item.salePrice = Number(indianSaleMRP.toFixed(2));
+            if (variant) {
+                let price = variant.price || 0;
+                let salePrice = variant.salePrice || 0;
+                const marginPercentage = variant.margin / 100 || 0.01;
+
+                // Apply margin based on country
+                if (country === 'INDIA') {
+                    const discount = 12 / 100;
+                    price = Number((price * (1 - discount)).toFixed(2));
+                    salePrice = Number((salePrice * (1 - discount)).toFixed(2));
+                } else if (['BANGLADESH', 'NEPAL'].includes(country)) {
+                    const margin = 20 / 100;
+                    price = Number((price + (price * margin)).toFixed(2));
+                    salePrice = Number((salePrice + (salePrice * margin)).toFixed(2));
+                } else {
+                    price = Number((price + (price * marginPercentage)).toFixed(2));
+                    salePrice = Number((salePrice + (salePrice * marginPercentage)).toFixed(2));
+                }
+
+                // Convert to selected currency
+                price = Number((price * exchangeRate.rate).toFixed(2));
+                salePrice = Number((salePrice * exchangeRate.rate).toFixed(2));
+
+                item.price = price;
+                item.salePrice = salePrice;
             }
+
             item.currency = currencySymbol; // Set the currency symbol
         });
 
