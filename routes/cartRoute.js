@@ -55,18 +55,25 @@ router.post('/batch', async (req, res) => {
             // Calculate the price for the item
             let itemPrice;
             if (country === "INDIA") {
+                // Apply discount in India
+                const discount = 12 / 100;
+                itemPrice = variant.salePrice !== 0 ? (variant.salePrice * (1 - discount)) : (variant.price * (1 - discount));
                 if (currency !== "INR") {
-                    itemPrice = variant.salePrice !== 0 ? (variant.salePrice * exchangeRate.rate).toFixed(2) : (variant.price * exchangeRate.rate).toFixed(2);
+                    itemPrice = (itemPrice * exchangeRate.rate).toFixed(2);
                 } else {
-                    itemPrice = variant.salePrice !== 0 ? variant.salePrice.toFixed(2) : variant.price.toFixed(2);
+                    itemPrice = itemPrice.toFixed(2);
                 }
             } else {
                 // NON-INDIA
-                const marginPercentage = variant.margin / 100;
+                let marginPercentage = variant.margin / 100;
+                if (['BANGLADESH', 'NEPAL'].includes(country)) {
+                    marginPercentage = 20 / 100; // Specific margin for Bangladesh and Nepal
+                }
+                itemPrice = variant.salePrice !== 0 ? ((variant.salePrice + (variant.salePrice * marginPercentage))) : ((variant.price + (variant.price * marginPercentage)));
                 if (currency !== "INR") {
-                    itemPrice = variant.salePrice !== 0 ? ((variant.salePrice + (variant.salePrice * marginPercentage)) * exchangeRate.rate).toFixed(2) : ((variant.price + (variant.price * marginPercentage)) * exchangeRate.rate).toFixed(2);
+                    itemPrice = (itemPrice * exchangeRate.rate).toFixed(2);
                 } else {
-                    itemPrice = variant.salePrice !== 0 ? ((variant.salePrice + (variant.salePrice * marginPercentage))).toFixed(2) : ((variant.price + (variant.price * marginPercentage))).toFixed(2);
+                    itemPrice = itemPrice.toFixed(2);
                 }
             }
 
@@ -143,6 +150,8 @@ router.post('/batch', async (req, res) => {
             } else if (totalPrice >= 1000) {
                 deliveryCharge = 0;
             }
+        } else if (['BANGLADESH', 'NEPAL'].includes(country)) {
+            deliveryCharge = 3107;
         } else {
             if (totalPrice > 0 && totalPrice < 4177.78) {
                 deliveryCharge = 4178.62;

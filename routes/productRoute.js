@@ -152,7 +152,7 @@ productRoute.post('/import', verifyToken, async (req, res) => {
             upSell: row.UpSell ? row.UpSell.split(',').map(item => item.trim()) : [],
             crossSell: row.CrossSell ? row.CrossSell.split(',').map(item => item.trim()) : [],
             externalLink: row.ExternalLink,
-            position: parseInt(row.Position),
+            position: parseInt(row.Position) || 0,
             manufacturerID: row.ManufacturerID,
             originCountry: row.OriginCountry,
             isDiscontinued: row.IsDiscontinued === 'TRUE',
@@ -591,6 +591,7 @@ productRoute.get('/', async (req, res) => {
                 { treatment: new RegExp(search, 'i') },
                 { originCountry: new RegExp(search, 'i') },
                 { tags: new RegExp(search, 'i') },
+                { manufacturer: new RegExp(search, 'i') },
                 { 'variants.sku': new RegExp(search, 'i') },
                 { 'variants.packSize': new RegExp(search, 'i') }
             ];
@@ -876,20 +877,20 @@ productRoute.get('/slug/:slug', async (req, res) => {
     }
 });
 
-// productRoute.get('/change/update', async (req, res) => {
-//     try {
-//         // Update all products to set `isStockAvailable` to true in all variants
-//         const result = await ProductModel.updateMany(
-//             {},
-//             { $set: { "variants.$[elem].isStockAvailable": true, "isVisible": true } },
-//             { arrayFilters: [{ "elem.isStockAvailable": { $ne: true } }], multi: true }
-//         );
-//         let count = result.modifiedCount;
-//         return res.status(200).send({ "msg": "Data Updated", count });
-//     } catch (error) {
-//         console.error(error);
-//         return res.status(500).send({ 'msg': "Error", error });
-//     }
-// });
+productRoute.get('/change/update', async (req, res) => {
+    try {
+        // Update all products to set `isStockAvailable` to true in all variants
+        const result = await ProductModel.updateMany(
+            {},
+            { $set: { "variants.$[elem].isStockAvailable": true, "isVisible": true } },
+            { arrayFilters: [{ "elem.isStockAvailable": { $ne: true } }], multi: true }
+        );
+        let count = result.modifiedCount;
+        return res.status(200).send({ "msg": "Data Updated", count });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).send({ 'msg': "Error", error });
+    }
+});
 
 module.exports = productRoute;
