@@ -187,6 +187,8 @@ const fetchAndUpdateRates = async () => {
 // Schedule the cron job to run every 6 hours
 cron.schedule('0 */6 * * *', fetchAndUpdateRates);
 
+fetchAndUpdateRates();
+
 // HTTPS Server Configuration
 const privateKey = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/privkey.pem', 'utf8');
 const certificate = fs.readFileSync('../etc/letsencrypt/live/api.assetorix.com/cert.pem', 'utf8');
