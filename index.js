@@ -164,7 +164,7 @@ const fetchAndUpdateRates = async () => {
 
         if (data.result === 'success') {
             const conversionRates = data.conversion_rates;
-            const currencies = ['USD', 'EUR', 'GBP', 'RUB', 'AED'];
+            const currencies = ['USD', 'EUR', 'GBP', 'RUB', 'AED', 'NPR', 'BDT'];
 
             for (const currency of currencies) {
                 const rate = conversionRates[currency];

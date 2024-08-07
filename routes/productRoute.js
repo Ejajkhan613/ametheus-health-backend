@@ -94,7 +94,7 @@ productRoute.post('/import', verifyToken, async (req, res) => {
             variants.push({
                 sku: row[`Variant${index}_SKU`] || generateSKU(),
                 packSize: row[`Variant${index}_PackSize`],
-                isStockAvailable: row[`Variant${index}_IsStockAvailable`] === 'true',
+                isStockAvailable: row[`Variant${index}_IsStockAvailable`] === 'TRUE',
                 price: parseFloat(row[`Variant${index}_Price`]) || 0,
                 salePrice: parseFloat(row[`Variant${index}_SalePrice`]) || 0,
                 margin: parseFloat(row[`Variant${index}_Margin`]) || 0,
@@ -135,10 +135,10 @@ productRoute.post('/import', verifyToken, async (req, res) => {
             genericID: row.GenericID,
             generic: row.Generic,
             treatment: row.Treatment,
-            isReturnable: row.IsReturnable === 'true',
-            isPrescriptionRequired: row.IsPrescriptionRequired === 'true',
-            isVisible: row.IsVisible === 'true',
-            isFeatured: row.IsFeatured === 'true',
+            isReturnable: row.IsReturnable === 'TRUE',
+            isPrescriptionRequired: row.IsPrescriptionRequired === 'TRUE',
+            isVisible: row.IsVisible === 'TRUE',
+            isFeatured: row.IsFeatured === 'TRUE',
             shortDescription: row.ShortDescription,
             description: row.Description,
             sideEffects: row.SideEffects,
@@ -155,7 +155,7 @@ productRoute.post('/import', verifyToken, async (req, res) => {
             position: parseInt(row.Position),
             manufacturerID: row.ManufacturerID,
             originCountry: row.OriginCountry,
-            isDiscontinued: row.IsDiscontinued === 'true',
+            isDiscontinued: row.IsDiscontinued === 'TRUE',
             metaTitle: row.MetaTitle,
             metaDescription: row.MetaDescription,
             metaTags: row.MetaTags,
@@ -197,10 +197,10 @@ productRoute.get('/export', verifyToken, async (req, res) => {
                 GenericID: product.genericID,
                 Generic: product.generic,
                 Treatment: product.treatment,
-                IsReturnable: product.isReturnable,
-                IsPrescriptionRequired: product.isPrescriptionRequired,
-                IsVisible: product.isVisible,
-                IsFeatured: product.isFeatured,
+                IsReturnable: product.isReturnable ? 'TRUE' : 'FALSE',
+                IsPrescriptionRequired: product.isPrescriptionRequired ? 'TRUE' : 'FALSE',
+                IsVisible: product.isVisible ? 'TRUE' : 'FALSE',
+                IsFeatured: product.isFeatured ? 'TRUE' : 'FALSE',
                 ShortDescription: product.shortDescription,
                 Description: product.description,
                 SideEffects: product.sideEffects,
@@ -217,14 +217,14 @@ productRoute.get('/export', verifyToken, async (req, res) => {
                 Position: product.position,
                 ManufacturerID: product.manufacturerID,
                 OriginCountry: product.originCountry,
-                IsDiscontinued: product.isDiscontinued,
+                IsDiscontinued: product.isDiscontinued ? 'TRUE' : 'FALSE',
                 MetaTitle: product.metaTitle,
                 MetaDescription: product.metaDescription,
                 MetaTags: product.metaTags,
                 ...product.variants.reduce((acc, variant, index) => {
                     acc[`Variant${index + 1}_SKU`] = variant.sku;
                     acc[`Variant${index + 1}_PackSize`] = variant.packSize;
-                    acc[`Variant${index + 1}_IsStockAvailable`] = variant.isStockAvailable;
+                    acc[`Variant${index + 1}_IsStockAvailable`] = variant.isStockAvailable ? 'TRUE' : 'FALSE';
                     acc[`Variant${index + 1}_Price`] = variant.price;
                     acc[`Variant${index + 1}_SalePrice`] = variant.salePrice;
                     acc[`Variant${index + 1}_Margin`] = variant.margin;
@@ -876,20 +876,20 @@ productRoute.get('/slug/:slug', async (req, res) => {
     }
 });
 
-productRoute.get('/change/update', async (req, res) => {
-    try {
-        // Update all products to set `isStockAvailable` to true in all variants
-        const result = await ProductModel.updateMany(
-            {},
-            { $set: { "variants.$[elem].isStockAvailable": true, "isVisible": true } },
-            { arrayFilters: [{ "elem.isStockAvailable": { $ne: true } }], multi: true }
-        );
-        let count = result.modifiedCount;
-        return res.status(200).send({ "msg": "Data Updated", count });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).send({ 'msg': "Error", error });
-    }
-});
+// productRoute.get('/change/update', async (req, res) => {
+//     try {
+//         // Update all products to set `isStockAvailable` to true in all variants
+//         const result = await ProductModel.updateMany(
+//             {},
+//             { $set: { "variants.$[elem].isStockAvailable": true, "isVisible": true } },
+//             { arrayFilters: [{ "elem.isStockAvailable": { $ne: true } }], multi: true }
+//         );
+//         let count = result.modifiedCount;
+//         return res.status(200).send({ "msg": "Data Updated", count });
+//     } catch (error) {
+//         console.error(error);
+//         return res.status(500).send({ 'msg': "Error", error });
+//     }
+// });
 
 module.exports = productRoute;
