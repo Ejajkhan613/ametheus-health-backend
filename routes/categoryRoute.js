@@ -34,8 +34,9 @@ const upload = multer({
             cb(null, { fieldName: file.fieldname });
         },
         key: function (req, file, cb) {
-            const categoryFolder = req.query.id ? 'category/' + "categoryid-" + req.query.id : 'category/';
-            const fileName = '-' + Date.now() + path.extname(file.originalname);
+            console.log(req.query);
+            const categoryFolder = req.query.id ? 'category/' + "categoryid-" + req.query.id + '-' : 'category/';
+            const fileName = Date.now() + path.extname(file.originalname);
             cb(null, categoryFolder + fileName);
         }
     }),
