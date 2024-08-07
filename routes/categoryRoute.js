@@ -1,6 +1,7 @@
 const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const multer = require('multer');
 const multerS3 = require('multer-s3');
+const crypto = require('crypto');
 const path = require('path');
 const express = require('express');
 const mongoose = require('mongoose');
@@ -34,9 +35,8 @@ const upload = multer({
             cb(null, { fieldName: file.fieldname });
         },
         key: function (req, file, cb) {
-            console.log(req.query);
             const categoryFolder = req.query.id ? 'category/' + "categoryid-" + req.query.id + '-' : 'category/';
-            const fileName = Date.now() + path.extname(file.originalname);
+            const fileName = `hash-${crypto.randomBytes(16).toString('hex')}-date-` + Date.now() + path.extname(file.originalname);
             cb(null, categoryFolder + fileName);
         }
     }),
