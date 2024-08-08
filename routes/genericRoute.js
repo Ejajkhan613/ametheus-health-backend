@@ -93,6 +93,10 @@ genericRoute.get('/', async (req, res) => {
 
 // GET all generics with optional search by name or ID
 genericRoute.get('/names', verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).json({ msg: 'Access Denied' });
+    }
+
     try {
         const { search } = req.query;
 
@@ -212,6 +216,10 @@ genericRoute.get('/:id', async (req, res) => {
 
 // GET a generic by ID (with all products who have the same genericID)
 genericRoute.get('/admin/:id', verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).json({ msg: 'Access Denied' });
+    }
+
     try {
         const { id } = req.params;
 
@@ -233,7 +241,6 @@ genericRoute.get('/admin/:id', verifyToken, async (req, res) => {
         res.status(500).json({ msg: 'Internal server error, try again later' });
     }
 });
-
 
 // POST a new generic
 genericRoute.post('/', validateGeneric, verifyToken, async (req, res) => {

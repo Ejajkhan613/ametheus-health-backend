@@ -188,7 +188,7 @@ manufacturerRouter.get('/:id', async (req, res) => {
         }
 
         // Fetch products associated with the manufacturer
-        const products = await ProductModel.find({ manufacturerID: id }).lean();
+        const products = await ProductModel.find({ manufacturerID: id, isVisible: true }).lean();
 
         // Fetch exchange rate based on user's selected currency
         let exchangeRate = { rate: 1 };

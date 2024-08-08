@@ -335,7 +335,6 @@ categoryRoute.post('/rmid', verifyToken, async (req, res) => {
     }
 });
 
-
 // Get All Categories with conditional fields
 categoryRoute.get('/view', async (req, res) => {
     try {
@@ -546,7 +545,111 @@ categoryRoute.get('/:id', async (req, res) => {
         }
         category = category.toObject();
 
+        const products = await ProductModel.find({ categoryID: { $in: [id] }, isVisible: true }).lean();
+
+        // Fetch exchange rate based on user's selected currency
+        let exchangeRate = { rate: 1 };
+        let currencySymbol = "₹";
+
+        const country = req.query.country || 'INDIA';
+        const currency = req.query.currency || 'INR';
+
+        if (currency !== 'INR') {
+            const foundExchangeRate = await ExchangeRate.findOne({ currency });
+            if (foundExchangeRate) {
+                exchangeRate = foundExchangeRate;
+                currencySymbol = exchangeRate.symbol || currency;
+            } else {
+                return res.status(400).send({ msg: 'Currency not supported' });
+            }
+        }
+
+        // Adjust product prices based on exchange rate and country selection
+        products.forEach(product => {
+            product.variants.forEach(variant => {
+                const indianMRP = variant.price || 0;
+                const indianSaleMRP = variant.salePrice || 0;
+                const margin = variant.margin / 100 || 0.01;
+
+                if (country === 'INDIA') {
+                    if (exchangeRate.rate !== 1) { // Currency other than INR
+                        variant.price = Number((indianMRP * exchangeRate.rate).toFixed(2));
+                        variant.salePrice = Number((indianSaleMRP * exchangeRate.rate).toFixed(2));
+                    } else {
+                        variant.price = Number(indianMRP.toFixed(2));
+                        variant.salePrice = Number(indianSaleMRP.toFixed(2));
+                    }
+                } else { // OUTSIDE INDIA
+                    const priceWithMargin = indianMRP * (1 + margin);
+                    const salePriceWithMargin = indianSaleMRP * (1 + margin);
+
+                    variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
+                    variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
+                }
+                variant.currency = currencySymbol; // Set the currency symbol
+            });
+        });
+
+        category.products = products;
+
+        if (category.parent) {
+            const parentData = await Category.findById(category.parent);
+            if (!parentData) {
+                return res.status(200).send(category);
+            }
+            category.parentName = parentData.name;
+            category.parentSlug = parentData.slug;
+            return res.status(200).send(category);
+        }
+
+        return res.status(200).send(category);
+    } catch (error) {
+        console.error('Error fetching category:', error);
+        return res.status(500).send({ msg: 'Internal server error, try again later' });
+    }
+});
+
+// Get Category by its id
+categoryRoute.get('/admin/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        let category = await Category.findById(id).populate('children');
+        if (!category) {
+            return res.status(404).send({ msg: 'Category not found' });
+        }
+        category = category.toObject();
+
         const products = await ProductModel.find({ categoryID: { $in: [id] } }).lean();
+
+        category.products = products;
+
+        if (category.parent) {
+            const parentData = await Category.findById(category.parent);
+            if (!parentData) {
+                return res.status(200).send(category);
+            }
+            category.parentName = parentData.name;
+            category.parentSlug = parentData.slug;
+            return res.status(200).send(category);
+        }
+
+        return res.status(200).send(category);
+    } catch (error) {
+        console.error('Error fetching category:', error);
+        return res.status(500).send({ msg: 'Internal server error, try again later' });
+    }
+});
+
+// Get Category by its slug (currency added)
+categoryRoute.get('/slug/:slug', async (req, res) => {
+    try {
+        const { slug } = req.params;
+        let category = await Category.findOne({ slug }).populate('children').lean();
+        if (!category) {
+            return res.status(404).send({ msg: 'Category not found' });
+        }
+
+        const products = await ProductModel.find({ categoryID: { $in: [category._id] }, isVisible: true }).lean();
 
         // Fetch exchange rate based on user's selected currency
         let exchangeRate = { rate: 1 };
@@ -611,7 +714,7 @@ categoryRoute.get('/:id', async (req, res) => {
 });
 
 // Get Category by its slug (currency added)
-categoryRoute.get('/slug/:slug', async (req, res) => {
+categoryRoute.get('/admin/slug/:slug', async (req, res) => {
     try {
         const { slug } = req.params;
         let category = await Category.findOne({ slug }).populate('children').lean();
@@ -620,49 +723,6 @@ categoryRoute.get('/slug/:slug', async (req, res) => {
         }
 
         const products = await ProductModel.find({ categoryID: { $in: [category._id] } }).lean();
-
-        // Fetch exchange rate based on user's selected currency
-        let exchangeRate = { rate: 1 };
-        let currencySymbol = "₹";
-
-        const country = req.query.country || 'INDIA';
-        const currency = req.query.currency || 'INR';
-
-        if (currency !== 'INR') {
-            const foundExchangeRate = await ExchangeRate.findOne({ currency });
-            if (foundExchangeRate) {
-                exchangeRate = foundExchangeRate;
-                currencySymbol = exchangeRate.symbol || currency;
-            } else {
-                return res.status(400).send({ msg: 'Currency not supported' });
-            }
-        }
-
-        // Adjust product prices based on exchange rate and country selection
-        products.forEach(product => {
-            product.variants.forEach(variant => {
-                const indianMRP = variant.price || 0;
-                const indianSaleMRP = variant.salePrice || 0;
-                const margin = variant.margin / 100 || 0.01;
-
-                if (country === 'INDIA') {
-                    if (exchangeRate.rate !== 1) { // Currency other than INR
-                        variant.price = Number((indianMRP * exchangeRate.rate).toFixed(2));
-                        variant.salePrice = Number((indianSaleMRP * exchangeRate.rate).toFixed(2));
-                    } else {
-                        variant.price = Number(indianMRP.toFixed(2));
-                        variant.salePrice = Number(indianSaleMRP.toFixed(2));
-                    }
-                } else { // OUTSIDE INDIA
-                    const priceWithMargin = indianMRP * (1 + margin);
-                    const salePriceWithMargin = indianSaleMRP * (1 + margin);
-
-                    variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
-                    variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
-                }
-                variant.currency = currencySymbol; // Set the currency symbol
-            });
-        });
 
         category.products = products;
 
