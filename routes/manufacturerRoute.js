@@ -163,7 +163,7 @@ manufacturerRouter.get('/names', async (req, res) => {
         }
 
         // Fetch manufacturers with search and pagination
-        const manufacturers = await ManufacturerModel.find(searchQuery).select('name');
+        const manufacturers = await ManufacturerModel.find(searchQuery).select('name').sort({ updatedAt: -1 });
 
         res.status(200).json({
             msg: 'Success',

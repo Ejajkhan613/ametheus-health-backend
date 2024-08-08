@@ -13,7 +13,7 @@ const manufacturerSchema = new mongoose.Schema({
     address: {
         type: String
     }
-});
+}, { timestamps: true });
 
 const ManufacturerModel = mongoose.model('Manufacturer', manufacturerSchema);
 
