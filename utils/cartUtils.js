@@ -50,7 +50,17 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
                     let price = variant.price;
                     let salePrice = variant.salePrice || 0;
 
-                    if (country !== "INDIA") {
+                    // Apply country-specific pricing rules
+                    if (country === "INDIA") {
+                        // Apply 12% discount for India
+                        price = price * 0.88;
+                        salePrice = salePrice * 0.88;
+                    } else if (['BANGLADESH', 'NEPAL'].includes(country)) {
+                        // Apply 20% margin for Bangladesh and Nepal
+                        price = price * 1.20;
+                        salePrice = salePrice * 1.20;
+                    } else {
+                        // Apply variant margin for other countries
                         const marginPercentage = variant.margin / 100;
                         price = price + (price * marginPercentage);
                         salePrice = salePrice + (salePrice * marginPercentage);
@@ -90,10 +100,15 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
             // Use base price (salePrice or price) for calculation
             let itemPrice = parseFloat(item.variantDetail.salePrice) || parseFloat(item.variantDetail.price);
 
-            if (country !== "INDIA") {
-                let priceWithMargin = itemPrice + (itemPrice * marginValue);
-
-                itemPrice = priceWithMargin;
+            if (country === "INDIA") {
+                // Apply 12% discount for India
+                itemPrice = itemPrice * 0.88;
+            } else if (['BANGLADESH', 'NEPAL'].includes(country)) {
+                // Apply 20% margin for Bangladesh and Nepal
+                itemPrice = itemPrice * 1.20;
+            } else {
+                // Apply margin for other countries
+                itemPrice = itemPrice + (itemPrice * marginValue);
             }
 
             total += (parseFloat(itemPrice) * item.quantity);
@@ -112,6 +127,8 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
             } else if (totalPriceInINR >= 1000) {
                 deliveryChargeInINR = 0;
             }
+        } else if (['BANGLADESH', 'NEPAL'].includes(country)) {
+            deliveryChargeInINR = 3107; // Specific delivery charge for Bangladesh and Nepal
         } else {
             if (totalPriceInINR > 0 && totalPriceInINR < 4177.78) {
                 deliveryChargeInINR = 4178.62;
