@@ -45,7 +45,6 @@ const Port = process.env.PORT || 4100;
 // Middleware
 app.use(express.json());
 app.use(helmet());
-// app.use(cors());
 app.use(morgan('combined'));
 app.use(bodyParser.json());
 app.use(rateLimiter);
@@ -56,6 +55,7 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true
 }));
+app.options('*', cors());
 
 
 app.use(session({
