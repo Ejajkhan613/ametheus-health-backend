@@ -159,7 +159,7 @@ genericRoute.get('/:id', async (req, res) => {
         }
 
         // Fetch products associated with the genericID
-        const products = await ProductModel.find({ genericID: id }).lean();
+        const products = await ProductModel.find({ genericID: id, isVisible: true }).lean();
 
         // Fetch exchange rate based on user's selected currency
         let exchangeRate = { rate: 1 };
@@ -199,6 +199,30 @@ genericRoute.get('/:id', async (req, res) => {
                 variant.currency = currencySymbol;
             });
         });
+
+        // Attach products to the generic object
+        generic.products = products;
+
+        res.status(200).json({ msg: 'Success', data: generic });
+    } catch (error) {
+        console.error('Error fetching generic:', error);
+        res.status(500).json({ msg: 'Internal server error, try again later' });
+    }
+});
+
+// GET a generic by ID (with all products who have the same genericID)
+genericRoute.get('/admin/:id', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Fetch the generic by ID
+        const generic = await GenericModel.findById(id).lean();
+        if (!generic) {
+            return res.status(404).json({ msg: 'Generic not found' });
+        }
+
+        // Fetch products associated with the genericID
+        const products = await ProductModel.find({ genericID: id }).lean();
 
         // Attach products to the generic object
         generic.products = products;

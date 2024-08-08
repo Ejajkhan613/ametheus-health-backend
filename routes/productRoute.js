@@ -563,6 +563,51 @@ productRoute.get('/search/', async (req, res) => {
     }
 });
 
+// Route to fetch all products with pagination, filtering, and sorting
+productRoute.get('/admin/search/', verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).send({ msg: 'Access Denied' });
+    }
+
+    try {
+        const { search = '' } = req.query;
+
+        const filters = {};
+
+        const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+        if (search) {
+            filters.$or = [
+                { title: new RegExp(search, 'i') },
+                { slug: new RegExp(search, 'i') },
+                { treatment: new RegExp(search, 'i') },
+                { originCountry: new RegExp(search, 'i') },
+                { tags: new RegExp(search, 'i') },
+                { 'variants.sku': new RegExp(search, 'i') },
+                { 'variants.packSize': new RegExp(search, 'i') }
+            ];
+            if (isValidObjectId(search)) {
+                filters.$or.push({ genericID: search });
+                filters.$or.push({ categoryID: { $in: [search] } });
+                filters.$or.push({ manufacturerID: search });
+                filters.$or.push({ _id: search });
+            }
+        }
+
+        const products = await ProductModel.find(filters)
+            .collation({ locale: 'en', strength: 2 })
+            .lean();
+
+        res.status(200).send({
+            msg: 'Success',
+            data: products
+        });
+    } catch (error) {
+        console.error('Error fetching products:', error);
+        res.status(500).send({ msg: 'Internal server error, try again later' });
+    }
+});
+
 // Route to fetch all products with pagination, filtering, sorting (currency added)
 productRoute.get('/', async (req, res) => {
     try {
@@ -687,6 +732,78 @@ productRoute.get('/', async (req, res) => {
     }
 });
 
+// Route to fetch all products with pagination, filtering, sorting
+productRoute.get('/admin/', verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).send({ msg: 'Access Denied' });
+    }
+
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const filters = {};
+        let {
+            search, minPrice, maxPrice, packSize, isVisible,
+            sortBy = 'title', order = 'asc'
+        } = req.query;
+
+        if (search) {
+            filters.$or = [
+                { title: new RegExp(search, 'i') },
+                { slug: new RegExp(search, 'i') },
+                { treatment: new RegExp(search, 'i') },
+                { originCountry: new RegExp(search, 'i') },
+                { tags: new RegExp(search, 'i') },
+                { manufacturer: new RegExp(search, 'i') },
+                { 'variants.sku': new RegExp(search, 'i') },
+                { 'variants.packSize': new RegExp(search, 'i') }
+            ];
+            if (isValidObjectId(search)) {
+                filters.$or.push({ genericID: search });
+                filters.$or.push({ categoryID: { $in: [search] } });
+                filters.$or.push({ manufacturerID: search });
+                filters.$or.push({ _id: search });
+            }
+        }
+
+        if (minPrice) filters['variants.price'] = { ...filters['variants.price'], $gte: parseFloat(minPrice) };
+        if (maxPrice) filters['variants.price'] = { ...filters['variants.price'], $lte: parseFloat(maxPrice) };
+        if (packSize) filters['variants.packSize'] = packSize;
+        if (isVisible) filters.isVisible = isVisible === 'true';
+
+        const sortOptions = {};
+        if (['title', 'createdAt', 'lastModified'].includes(sortBy)) {
+            sortOptions[sortBy] = order === 'desc' ? -1 : 1;
+        } else {
+            sortOptions.title = 1; // Default sorting by title
+        }
+
+        const totalProducts = await ProductModel.countDocuments(filters);
+        const totalPages = Math.ceil(totalProducts / limit);
+
+        let products = await ProductModel.find(filters)
+            .skip(skip)
+            .limit(limit)
+            .sort(sortOptions)
+            .collation({ locale: 'en', strength: 2 })
+            .lean();
+
+        res.status(200).send({
+            msg: 'Success',
+            data: products,
+            totalProducts,
+            totalPages,
+            currentPage: page,
+            pageSize: limit
+        });
+    } catch (error) {
+        console.error('Error fetching products:', error);
+        res.status(500).send({ msg: 'Internal server error, try again later' });
+    }
+});
+
 // Route to fetch a single product by ID (currency added)
 productRoute.get('/:id', async (req, res) => {
     try {
@@ -744,6 +861,25 @@ productRoute.get('/:id', async (req, res) => {
             variant.currency = currencySymbol;
         });
 
+
+        res.status(200).send({ msg: 'Success', data: product });
+    } catch (error) {
+        console.error('Error fetching product:', error);
+        res.status(500).send({ msg: 'Internal server error, try again later' });
+    }
+});
+
+// Route to fetch a single product by ID
+productRoute.get('/admin/:id', verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).send({ msg: 'Access Denied' });
+    }
+
+    try {
+        const product = await ProductModel.findById(req.params.id);
+        if (!product) {
+            return res.status(404).send({ msg: 'Product not found' });
+        }
 
         res.status(200).send({ msg: 'Success', data: product });
     } catch (error) {
@@ -815,6 +951,25 @@ productRoute.get('/category/:id', async (req, res) => {
     }
 });
 
+// Route to fetch products by category ID
+productRoute.get('/admin/category/:id', verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).send({ msg: 'Access Denied' });
+    }
+
+    try {
+        const products = await ProductModel.find({ categoryID: { $in: [req.params.id] } });
+        if (!products || products.length === 0) {
+            return res.status(404).send({ msg: 'No products found for this category' });
+        }
+
+        res.status(200).send({ msg: 'Success', data: products });
+    } catch (error) {
+        console.error('Error fetching products:', error);
+        res.status(500).send({ msg: 'Internal server error, try again later' });
+    }
+});
+
 // Route to fetch a single product by slug (currency added)
 productRoute.get('/slug/:slug', async (req, res) => {
     try {
@@ -877,20 +1032,43 @@ productRoute.get('/slug/:slug', async (req, res) => {
     }
 });
 
-productRoute.get('/change/update', async (req, res) => {
+// Route to fetch a single product by slug
+productRoute.get('/admin/slug/:slug', verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).send({ msg: 'Access Denied' });
+    }
+
     try {
-        // Update all products to set `isStockAvailable` to true in all variants
-        const result = await ProductModel.updateMany(
-            {},
-            { $set: { "variants.$[elem].isStockAvailable": true, "isVisible": true } },
-            { arrayFilters: [{ "elem.isStockAvailable": { $ne: true } }], multi: true }
-        );
-        let count = result.modifiedCount;
-        return res.status(200).send({ "msg": "Data Updated", count });
+        const product = await ProductModel.findOne({ slug: req.params.slug });
+        if (!product) {
+            return res.status(404).send({ msg: 'Product not found' });
+        }
+
+        res.status(200).send({ msg: 'Success', data: product });
     } catch (error) {
-        console.error(error);
-        return res.status(500).send({ 'msg': "Error", error });
+        console.error('Error fetching product:', error);
+        res.status(500).send({ msg: 'Internal server error, try again later' });
     }
 });
+
+// productRoute.get('/admin/change/update', async (req, res) => {
+//     if (req.userDetail.role !== "admin") {
+//         return res.status(400).send({ msg: 'Access Denied' });
+//     }
+
+//     try {
+//         // Update all products to set `isStockAvailable` to true in all variants
+//         const result = await ProductModel.updateMany(
+//             {},
+//             { $set: { "variants.$[elem].isStockAvailable": true, "isVisible": true } },
+//             { arrayFilters: [{ "elem.isStockAvailable": { $ne: true } }], multi: true }
+//         );
+//         let count = result.modifiedCount;
+//         return res.status(200).send({ "msg": "Data Updated", count });
+//     } catch (error) {
+//         console.error(error);
+//         return res.status(500).send({ 'msg': "Error", error });
+//     }
+// });
 
 module.exports = productRoute;

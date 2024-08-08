@@ -26,7 +26,7 @@ async function createSlug(text) {
 
 // Validation middleware for manufacturer operations
 const validateManufacturer = [
-    body('name').notEmpty().withMessage('Name is required'),
+    body('name').notEmpty().withMessage('Manufacturer Name is required'),
     body('address').optional().isString()
 ];
 
@@ -163,7 +163,7 @@ manufacturerRouter.get('/names', async (req, res) => {
         }
 
         // Fetch manufacturers with search and pagination
-        const manufacturers = await ManufacturerModel.find(searchQuery).select('name').sort({ createdAt: -1 });
+        const manufacturers = await ManufacturerModel.find(searchQuery).select('name').sort({ name: 1 });
 
         res.status(200).json({
             msg: 'Success',
@@ -245,6 +245,32 @@ manufacturerRouter.get('/:id', async (req, res) => {
     }
 });
 
+// Get a manufacturer by ID
+manufacturerRouter.get('/admin/:id', verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).json({ msg: 'Access Denied' });
+    }
+
+    try {
+        const { id } = req.params;
+
+        // Fetch the manufacturer
+        const manufacturer = await ManufacturerModel.findById(id).select('-__v').lean();
+        if (!manufacturer) {
+            return res.status(404).json({ msg: 'Manufacturer not found' });
+        }
+
+        // Fetch products associated with the manufacturer
+        const products = await ProductModel.find({ manufacturerID: id }).lean();
+
+        manufacturer.products = products;
+
+        res.status(200).json({ msg: 'Success', data: manufacturer });
+    } catch (error) {
+        console.error('Error fetching manufacturer:', error);
+        res.status(500).json({ msg: 'Internal server error, try again later' });
+    }
+});
 
 // Remove or update a manufacturerID of a specific product
 manufacturerRouter.post('/rmid', verifyToken, async (req, res) => {
@@ -276,7 +302,6 @@ manufacturerRouter.post('/rmid', verifyToken, async (req, res) => {
     }
 });
 
-
 // Delete a manufacturer
 manufacturerRouter.delete('/:id', verifyToken, async (req, res) => {
     if (req.userDetail.role !== "admin") {
@@ -301,67 +326,5 @@ manufacturerRouter.delete('/:id', verifyToken, async (req, res) => {
         res.status(500).json({ msg: 'Internal server error, try again later' });
     }
 });
-
-// Get all products for a specific manufacturer (currency and country added)
-manufacturerRouter.get('/:id/product', async (req, res) => {
-    try {
-        const manufacturerID = req.params.id;
-        const { country = 'INDIA', currency = 'INR' } = req.query;
-
-        // Fetch the manufacturer
-        const manufacturer = await ManufacturerModel.findById(manufacturerID);
-        if (!manufacturer) {
-            return res.status(404).json({ msg: 'Manufacturer not found' });
-        }
-
-        // Fetch exchange rate based on user's selected currency
-        let exchangeRate = { rate: 1 };
-        let currencySymbol = "₹";
-
-        if (currency !== 'INR') {
-            const foundExchangeRate = await ExchangeRate.findOne({ currency });
-            if (foundExchangeRate) {
-                exchangeRate = foundExchangeRate;
-                currencySymbol = foundExchangeRate.symbol || currency;
-            } else {
-                return res.status(400).json({ msg: 'Currency not supported' });
-            }
-        }
-
-        // Fetch products for the manufacturer
-        const products = await ProductModel.find({ manufacturerID }).lean();
-
-        // Adjust prices in products based on exchange rate and country selection
-        products.forEach(product => {
-            product.variants.forEach(variant => {
-                const indianMRP = variant.price || 0;
-                const indianSaleMRP = variant.salePrice || 0;
-                const margin = variant.margin / 100 || 0.01;
-
-                if (country === 'INDIA') {
-                    // If currency is INR, no need for additional conversion
-                    variant.price = Number((indianMRP * exchangeRate.rate).toFixed(2));
-                    variant.salePrice = Number((indianSaleMRP * exchangeRate.rate).toFixed(2));
-                } else { // For other countries
-                    const priceWithMargin = indianMRP * (1 + margin);
-                    const salePriceWithMargin = indianSaleMRP * (1 + margin);
-
-                    // Convert prices to the selected currency
-                    variant.price = Number((priceWithMargin * exchangeRate.rate).toFixed(2));
-                    variant.salePrice = Number((salePriceWithMargin * exchangeRate.rate).toFixed(2));
-                }
-
-                // Set the currency symbol
-                variant.currency = currencySymbol;
-            });
-        });
-
-        res.status(200).json({ msg: 'Success', data: products });
-    } catch (error) {
-        console.error('Error fetching products for manufacturer:', error);
-        res.status(500).json({ msg: 'Internal server error, try again later' });
-    }
-});
-
 
 module.exports = manufacturerRouter;
