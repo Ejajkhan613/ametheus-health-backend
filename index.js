@@ -82,9 +82,15 @@ app.get('/ah/auth/google', passport.authenticate('google', {
     scope: ['profile', 'email']
 }));
 
+// Define the CORS configuration for this specific route
+const corsForGoogleCallback = cors({
+    origin: 'https://ah-medicine-new.vercel.app',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    credentials: true
+});
 
 // Endpoint to handle Google OAuth callback
-app.post('/ah/auth/google/callback', cors({ origin: 'https://ah-medicine-new.vercel.app/', methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], credentials: true }), async (req, res) => {
+app.post('/ah/auth/google/callback', corsForGoogleCallback, async (req, res) => {
     const { token } = req.body;
 
     try {
