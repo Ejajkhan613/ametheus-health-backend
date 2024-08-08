@@ -52,7 +52,7 @@ app.use(rateLimiter);
 
 // Middleware
 app.use(cors({
-    origin: '*',
+    origin: ['https://ah-medicine-new.vercel.app', 'https://ametheushealth-admin-dashboard.vercel.app', 'localhost:5173', 'localhost:3000'],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true
 }));
@@ -83,14 +83,14 @@ app.get('/ah/auth/google', passport.authenticate('google', {
 }));
 
 // Define the CORS configuration for this specific route
-const corsForGoogleCallback = cors({
-    origin: 'https://ah-medicine-new.vercel.app',
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    credentials: true
-});
+// const corsForGoogleCallback = cors({
+//     origin: 'https://ah-medicine-new.vercel.app',
+//     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+//     credentials: true
+// });
 
 // Endpoint to handle Google OAuth callback
-app.post('/ah/auth/google/callback', corsForGoogleCallback, async (req, res) => {
+app.post('/ah/auth/google/callback', async (req, res) => {
     const { token } = req.body;
 
     try {
