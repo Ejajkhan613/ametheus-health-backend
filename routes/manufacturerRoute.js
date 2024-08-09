@@ -272,6 +272,12 @@ manufacturerRouter.get('/admin/:id', verifyToken, async (req, res) => {
 
     try {
         const { id } = req.params;
+        const { page = 1, limit = 10 } = req.query;
+
+        // Convert pagination parameters to integers
+        const pageNumber = parseInt(page, 10);
+        const pageSize = parseInt(limit, 10);
+        const skip = (pageNumber - 1) * pageSize;
 
         // Fetch the manufacturer
         const manufacturer = await ManufacturerModel.findById(id).select('-__v').lean();
@@ -279,12 +285,26 @@ manufacturerRouter.get('/admin/:id', verifyToken, async (req, res) => {
             return res.status(404).json({ msg: 'Manufacturer not found' });
         }
 
-        // Fetch products associated with the manufacturer
-        const products = await ProductModel.find({ manufacturerID: id }).lean();
+        // Fetch products associated with the manufacturer with pagination
+        const filters = { manufacturerID: id };
+        const totalProducts = await ProductModel.countDocuments(filters);
+        const totalPages = Math.ceil(totalProducts / pageSize);
+
+        const products = await ProductModel.find(filters)
+            .skip(skip)
+            .limit(pageSize)
+            .lean();
 
         manufacturer.products = products;
 
-        res.status(200).json({ msg: 'Success', data: manufacturer });
+        res.status(200).json({
+            msg: 'Success',
+            data: manufacturer,
+            totalProducts,
+            totalPages,
+            currentPage: pageNumber,
+            pageSize: pageSize
+        });
     } catch (error) {
         console.error('Error fetching manufacturer:', error);
         res.status(500).json({ msg: 'Internal server error, try again later' });
