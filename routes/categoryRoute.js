@@ -539,20 +539,32 @@ categoryRoute.get('/hierarchy-names', async (req, res) => {
 categoryRoute.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
+        const { page = 1, limit = 10, currency = 'INR', country = 'INDIA' } = req.query;
+
+        // Convert pagination parameters to integers
+        const pageNumber = parseInt(page, 10);
+        const pageSize = parseInt(limit, 10);
+        const skip = (pageNumber - 1) * pageSize;
+
         let category = await Category.findById(id).populate('children');
         if (!category) {
             return res.status(404).send({ msg: 'Category not found' });
         }
         category = category.toObject();
 
-        const products = await ProductModel.find({ categoryID: { $in: [id] }, isVisible: true }).lean();
+        // Count total products for pagination
+        const totalProducts = await ProductModel.countDocuments({ categoryID: id, isVisible: true });
+        const totalPages = Math.ceil(totalProducts / pageSize);
+
+        // Fetch products associated with the category with pagination
+        const products = await ProductModel.find({ categoryID: id, isVisible: true })
+            .skip(skip)
+            .limit(pageSize)
+            .lean();
 
         // Fetch exchange rate based on user's selected currency
         let exchangeRate = { rate: 1 };
         let currencySymbol = "₹";
-
-        const country = req.query.country || 'INDIA';
-        const currency = req.query.currency || 'INR';
 
         if (currency !== 'INR') {
             const foundExchangeRate = await ExchangeRate.findOne({ currency });
@@ -595,14 +607,32 @@ categoryRoute.get('/:id', async (req, res) => {
         if (category.parent) {
             const parentData = await Category.findById(category.parent);
             if (!parentData) {
-                return res.status(200).send(category);
+                return res.status(200).send({
+                    data: category,
+                    totalProducts,
+                    totalPages,
+                    currentPage: pageNumber,
+                    pageSize
+                });
             }
             category.parentName = parentData.name;
             category.parentSlug = parentData.slug;
-            return res.status(200).send(category);
+            return res.status(200).send({
+                data: category,
+                totalProducts,
+                totalPages,
+                currentPage: pageNumber,
+                pageSize
+            });
         }
 
-        return res.status(200).send(category);
+        return res.status(200).send({
+            data: category,
+            totalProducts,
+            totalPages,
+            currentPage: pageNumber,
+            pageSize
+        });
     } catch (error) {
         console.error('Error fetching category:', error);
         return res.status(500).send({ msg: 'Internal server error, try again later' });
@@ -617,27 +647,63 @@ categoryRoute.get('/admin/:id', verifyToken, async (req, res) => {
 
     try {
         const { id } = req.params;
+        const { page = 1, limit = 10 } = req.query;
+
+        // Convert pagination parameters to integers
+        const pageNumber = parseInt(page, 10);
+        const pageSize = parseInt(limit, 10);
+        const skip = (pageNumber - 1) * pageSize;
+
         let category = await Category.findById(id).populate('children');
         if (!category) {
             return res.status(404).send({ msg: 'Category not found' });
         }
         category = category.toObject();
 
-        // const products = await ProductModel.find({ categoryID: { $in: [category._id] } }).sort({ 'title': 1 }).lean();
+        // Count total products for pagination
+        const totalProducts = await ProductModel.countDocuments({ categoryID: id });
+        const totalPages = Math.ceil(totalProducts / pageSize);
 
-        // category.products = products;
+        // Fetch products associated with the category with pagination
+        const products = await ProductModel.find({ categoryID: id })
+            .sort({ 'title': 1 }) // Optional: Adjust sorting as needed
+            .skip(skip)
+            .limit(pageSize)
+            .lean();
+
+        category.products = products;
 
         if (category.parent) {
             const parentData = await Category.findById(category.parent);
             if (!parentData) {
-                return res.status(200).send(category);
+                return res.status(200).send({
+                    data: category,
+                    totalProducts,
+                    totalPages,
+                    currentPage: pageNumber,
+                    pageSize
+                });
             }
+
             category.parentName = parentData.name;
             category.parentSlug = parentData.slug;
-            return res.status(200).send(category);
+            
+            return res.status(200).send({
+                data: category,
+                totalProducts,
+                totalPages,
+                currentPage: pageNumber,
+                pageSize
+            });
         }
 
-        return res.status(200).send(category);
+        return res.status(200).send({
+            data: category,
+            totalProducts,
+            totalPages,
+            currentPage: pageNumber,
+            pageSize
+        });
     } catch (error) {
         console.error('Error fetching category:', error);
         return res.status(500).send({ msg: 'Internal server error, try again later' });
