@@ -603,36 +603,22 @@ categoryRoute.get('/:id', async (req, res) => {
         });
 
         category.products = products;
+        category.totalProducts = totalProducts;
+        category.totalPages = totalPages;
+        category.currentPage = pageNumber;
+        category.pageSize = pageSize;
 
         if (category.parent) {
             const parentData = await Category.findById(category.parent);
             if (!parentData) {
-                return res.status(200).send({
-                    data: category,
-                    totalProducts,
-                    totalPages,
-                    currentPage: pageNumber,
-                    pageSize
-                });
+                return res.status(200).send(category);
             }
             category.parentName = parentData.name;
             category.parentSlug = parentData.slug;
-            return res.status(200).send({
-                data: category,
-                totalProducts,
-                totalPages,
-                currentPage: pageNumber,
-                pageSize
-            });
+            return res.status(200).send(category);
         }
 
-        return res.status(200).send({
-            data: category,
-            totalProducts,
-            totalPages,
-            currentPage: pageNumber,
-            pageSize
-        });
+        return res.status(200).send(category);
     } catch (error) {
         console.error('Error fetching category:', error);
         return res.status(500).send({ msg: 'Internal server error, try again later' });
@@ -672,38 +658,22 @@ categoryRoute.get('/admin/:id', verifyToken, async (req, res) => {
             .lean();
 
         category.products = products;
+        category.totalProducts = totalProducts;
+        category.totalPages = totalPages;
+        category.currentPage = pageNumber;
+        category.pageSize = pageSize;
 
         if (category.parent) {
             const parentData = await Category.findById(category.parent);
             if (!parentData) {
-                return res.status(200).send({
-                    data: category,
-                    totalProducts,
-                    totalPages,
-                    currentPage: pageNumber,
-                    pageSize
-                });
+                return res.status(200).send(category);
             }
-
             category.parentName = parentData.name;
             category.parentSlug = parentData.slug;
-            
-            return res.status(200).send({
-                data: category,
-                totalProducts,
-                totalPages,
-                currentPage: pageNumber,
-                pageSize
-            });
+            return res.status(200).send(category);
         }
 
-        return res.status(200).send({
-            data: category,
-            totalProducts,
-            totalPages,
-            currentPage: pageNumber,
-            pageSize
-        });
+        return res.status(200).send(category);
     } catch (error) {
         console.error('Error fetching category:', error);
         return res.status(500).send({ msg: 'Internal server error, try again later' });
