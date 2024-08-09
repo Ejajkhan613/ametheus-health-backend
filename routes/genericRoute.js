@@ -219,16 +219,16 @@ genericRoute.get('/:id', async (req, res) => {
             });
         });
 
+        generic.product = products;
+
         // Attach paginated products to the generic object
-        generic.products = {
-            data: products,
+        res.status(200).json({
+            data: generic,
             totalProducts,
             totalPages,
             currentPage: pageNumber,
             pageSize: pageSize
-        };
-
-        res.status(200).json({ msg: 'Success', data: generic });
+        });
     } catch (error) {
         console.error('Error fetching generic:', error);
         res.status(500).json({ msg: 'Internal server error, try again later' });
@@ -269,16 +269,16 @@ genericRoute.get('/admin/:id', verifyToken, async (req, res) => {
             .limit(pageSize)
             .lean();
 
+        generic.product = products;
+
         // Attach paginated products to the generic object
-        generic.products = {
-            data: products,
+        res.status(200).json({
+            data: generic,
             totalProducts,
             totalPages,
             currentPage: pageNumber,
             pageSize: pageSize
-        };
-
-        res.status(200).json({ msg: 'Success', data: generic });
+        });
     } catch (error) {
         console.error('Error fetching generic:', error);
         res.status(500).json({ msg: 'Internal server error, try again later' });

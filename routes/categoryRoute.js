@@ -610,7 +610,7 @@ categoryRoute.get('/:id', async (req, res) => {
             const parentData = await Category.findById(category.parent);
             if (!parentData) {
                 return res.status(200).send({
-                    category,
+                    data: category,
                     totalProducts,
                     totalPages,
                     currentPage: page,
@@ -620,7 +620,7 @@ categoryRoute.get('/:id', async (req, res) => {
             category.parentName = parentData.name;
             category.parentSlug = parentData.slug;
             return res.status(200).send({
-                category,
+                data: category,
                 totalProducts,
                 totalPages,
                 currentPage: page,
@@ -629,7 +629,7 @@ categoryRoute.get('/:id', async (req, res) => {
         }
 
         return res.status(200).send({
-            category,
+            data: category,
             totalProducts,
             totalPages,
             currentPage: page,
@@ -641,31 +641,65 @@ categoryRoute.get('/:id', async (req, res) => {
     }
 });
 
-// Get Category by its id
+// Get Category by its id with pagination
 categoryRoute.get('/admin/:id', async (req, res) => {
     try {
         const { id } = req.params;
+        const { page = 1, limit = 10 } = req.query;
+
+        // Convert pagination parameters to integers
+        const pageNumber = parseInt(page, 10);
+        const pageSize = parseInt(limit, 10);
+        const skip = (pageNumber - 1) * pageSize;
+
+        // Fetch the category by ID
         let category = await Category.findById(id).populate('children');
         if (!category) {
             return res.status(404).send({ msg: 'Category not found' });
         }
         category = category.toObject();
 
-        const products = await ProductModel.find({ categoryID: { $in: [id] } }).lean();
+        // Fetch products associated with the category with pagination
+        const filters = { categoryID: { $in: [id] } };
+        const totalProducts = await ProductModel.countDocuments(filters);
+        const totalPages = Math.ceil(totalProducts / pageSize);
+
+        const products = await ProductModel.find(filters)
+            .skip(skip)
+            .limit(pageSize)
+            .lean();
 
         category.products = products;
 
         if (category.parent) {
             const parentData = await Category.findById(category.parent);
             if (!parentData) {
-                return res.status(200).send(category);
+                return res.status(200).send({
+                    data: category,
+                    totalProducts,
+                    totalPages,
+                    currentPage: pageNumber,
+                    pageSize: pageSize
+                });
             }
             category.parentName = parentData.name;
             category.parentSlug = parentData.slug;
-            return res.status(200).send(category);
+            return res.status(200).send({
+                data: category,
+                totalProducts,
+                totalPages,
+                currentPage: pageNumber,
+                pageSize: pageSize
+            });
         }
 
-        return res.status(200).send(category);
+        return res.status(200).send({
+            data: category,
+            totalProducts,
+            totalPages,
+            currentPage: pageNumber,
+            pageSize: pageSize
+        });
     } catch (error) {
         console.error('Error fetching category:', error);
         return res.status(500).send({ msg: 'Internal server error, try again later' });
@@ -747,7 +781,7 @@ categoryRoute.get('/slug/:slug', async (req, res) => {
             const parentData = await Category.findById(category.parent);
             if (!parentData) {
                 return res.status(200).send({
-                    category,
+                    data: category,
                     totalProducts,
                     totalPages,
                     currentPage: page,
@@ -757,7 +791,7 @@ categoryRoute.get('/slug/:slug', async (req, res) => {
             category.parentName = parentData.name;
             category.parentSlug = parentData.slug;
             return res.status(200).send({
-                category,
+                data: category,
                 totalProducts,
                 totalPages,
                 currentPage: page,
@@ -766,7 +800,7 @@ categoryRoute.get('/slug/:slug', async (req, res) => {
         }
 
         return res.status(200).send({
-            category,
+            data: category,
             totalProducts,
             totalPages,
             currentPage: page,
@@ -810,7 +844,7 @@ categoryRoute.get('/admin/slug/:slug', async (req, res) => {
             const parentData = await Category.findById(category.parent);
             if (!parentData) {
                 return res.status(200).send({
-                    category,
+                    data: category,
                     totalProducts,
                     totalPages,
                     currentPage: page,
@@ -820,7 +854,7 @@ categoryRoute.get('/admin/slug/:slug', async (req, res) => {
             category.parentName = parentData.name;
             category.parentSlug = parentData.slug;
             return res.status(200).send({
-                category,
+                data: category,
                 totalProducts,
                 totalPages,
                 currentPage: page,
@@ -829,7 +863,7 @@ categoryRoute.get('/admin/slug/:slug', async (req, res) => {
         }
 
         return res.status(200).send({
-            category,
+            data: category,
             totalProducts,
             totalPages,
             currentPage: page,

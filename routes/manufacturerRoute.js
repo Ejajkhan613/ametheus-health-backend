@@ -248,16 +248,16 @@ manufacturerRouter.get('/:id', async (req, res) => {
             });
         });
 
+        manufacturer.products = products;
+
         // Attach paginated products to the manufacturer object
-        manufacturer.products = {
+        res.status(200).json({
             data: products,
             totalProducts,
             totalPages,
             currentPage: pageNumber,
             pageSize: pageSize
-        };
-
-        res.status(200).json({ msg: 'Success', data: manufacturer });
+        });
     } catch (error) {
         console.error('Error fetching manufacturer:', error);
         res.status(500).json({ msg: 'Internal server error, try again later' });
@@ -295,16 +295,16 @@ manufacturerRouter.get('/admin/:id', verifyToken, async (req, res) => {
             .limit(pageSize)
             .lean();
 
+        manufacturer.products = products;
+
         // Attach paginated products to the manufacturer object
-        manufacturer.products = {
+        res.status(200).json({
             data: products,
             totalProducts,
             totalPages,
             currentPage: pageNumber,
             pageSize: pageSize
-        };
-
-        res.status(200).json({ msg: 'Success', data: manufacturer });
+        });
     } catch (error) {
         console.error('Error fetching manufacturer:', error);
         res.status(500).json({ msg: 'Internal server error, try again later' });
