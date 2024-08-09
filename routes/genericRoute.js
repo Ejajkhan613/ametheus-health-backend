@@ -167,8 +167,15 @@ genericRoute.get('/:id', async (req, res) => {
             return res.status(404).json({ msg: 'Generic not found' });
         }
 
-        // Fetch products associated with the genericID
-        const products = await ProductModel.find({ genericID: id, isVisible: true }).lean();
+        // Fetch products associated with the genericID with pagination
+        const filters = { genericID: id, isVisible: true };
+        const totalProducts = await ProductModel.countDocuments(filters);
+        const totalPages = Math.ceil(totalProducts / pageSize);
+
+        let products = await ProductModel.find(filters)
+            .skip(skip)
+            .limit(pageSize)
+            .lean();
 
         // Fetch exchange rate based on user's selected currency
         let exchangeRate = { rate: 1 };
