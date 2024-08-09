@@ -619,10 +619,6 @@ categoryRoute.get('/admin/:id', async (req, res) => {
         }
         category = category.toObject();
 
-        const products = await ProductModel.find({ categoryID: { $in: [id] } }).lean();
-
-        category.products = products;
-
         if (category.parent) {
             const parentData = await Category.findById(category.parent);
             if (!parentData) {
@@ -649,7 +645,7 @@ categoryRoute.get('/slug/:slug', async (req, res) => {
             return res.status(404).send({ msg: 'Category not found' });
         }
 
-        const products = await ProductModel.find({ categoryID: { $in: [category._id] }, isVisible: true }).lean();
+        const products = await ProductModel.find({ categoryID: { $in: [category._id] }, isVisible: true }).sort({ 'title': 1 }).lean();
 
         // Fetch exchange rate based on user's selected currency
         let exchangeRate = { rate: 1 };

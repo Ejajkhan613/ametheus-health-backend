@@ -608,43 +608,6 @@ productRoute.get('/admin/search/', verifyToken, async (req, res) => {
     }
 });
 
-// Route to fetch all products with pagination, filtering, and sorting
-productRoute.get('/admin/search/manufacturer', verifyToken, async (req, res) => {
-    if (req.userDetail.role !== "admin") {
-        return res.status(400).send({ msg: 'Access Denied' });
-    }
-
-    try {
-        const { search = '' } = req.query;
-
-        const filters = {};
-
-        const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
-
-        if (search) {
-            filters.$or = [
-                { manufacturer: new RegExp(search, 'i') },
-            ];
-            if (isValidObjectId(search)) {
-                filters.$or.push({ manufacturerID: search });
-            }
-        }
-
-        const products = await ProductModel.find(filters)
-            .select("name manufacturer")
-            .collation({ locale: 'en', strength: 2 })
-            .lean();
-
-        res.status(200).send({
-            msg: 'Success',
-            data: products
-        });
-    } catch (error) {
-        console.error('Error fetching products:', error);
-        res.status(500).send({ msg: 'Internal server error, try again later' });
-    }
-});
-
 // Route to fetch all products with pagination, filtering, sorting (currency added)
 productRoute.get('/', async (req, res) => {
     try {
