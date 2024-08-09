@@ -234,10 +234,10 @@ genericRoute.get('/:id', async (req, res) => {
 });
 
 // GET a generic by ID (with all products who have the same genericID)
-genericRoute.get('/admin/:id', verifyToken, async (req, res) => {
-    if (req.userDetail.role !== "admin") {
-        return res.status(400).json({ msg: 'Access Denied' });
-    }
+genericRoute.get('/admin/:id', async (req, res) => {
+    // if (req.userDetail.role !== "admin") {
+    //     return res.status(400).json({ msg: 'Access Denied' });
+    // }
 
     try {
         const { id } = req.params;
