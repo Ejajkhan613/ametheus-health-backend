@@ -175,11 +175,16 @@ manufacturerRouter.get('/names', async (req, res) => {
     }
 });
 
-// Get a manufacturer by ID (currency and country added)
+// Get a manufacturer by ID with pagination, currency, and country considerations
 manufacturerRouter.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { currency = 'INR', country = 'INDIA' } = req.query;
+        const { currency = 'INR', country = 'INDIA', page = 1, limit = 10 } = req.query;
+
+        // Convert pagination parameters to integers
+        const pageNumber = parseInt(page, 10);
+        const pageSize = parseInt(limit, 10);
+        const skip = (pageNumber - 1) * pageSize;
 
         // Fetch the manufacturer
         const manufacturer = await ManufacturerModel.findById(id).select('-__v').lean();
@@ -187,8 +192,15 @@ manufacturerRouter.get('/:id', async (req, res) => {
             return res.status(404).json({ msg: 'Manufacturer not found' });
         }
 
-        // Fetch products associated with the manufacturer
-        const products = await ProductModel.find({ manufacturerID: id, isVisible: true }).lean();
+        // Fetch products associated with the manufacturer with pagination
+        const filters = { manufacturerID: id, isVisible: true };
+        const totalProducts = await ProductModel.countDocuments(filters);
+        const totalPages = Math.ceil(totalProducts / pageSize);
+
+        const products = await ProductModel.find(filters)
+            .skip(skip)
+            .limit(pageSize)
+            .lean();
 
         // Fetch exchange rate based on user's selected currency
         let exchangeRate = { rate: 1 };
@@ -236,7 +248,14 @@ manufacturerRouter.get('/:id', async (req, res) => {
             });
         });
 
-        manufacturer.products = products;
+        // Attach paginated products to the manufacturer object
+        manufacturer.products = {
+            data: products,
+            totalProducts,
+            totalPages,
+            currentPage: pageNumber,
+            pageSize: pageSize
+        };
 
         res.status(200).json({ msg: 'Success', data: manufacturer });
     } catch (error) {
@@ -245,7 +264,7 @@ manufacturerRouter.get('/:id', async (req, res) => {
     }
 });
 
-// Get a manufacturer by ID
+// Get a manufacturer by ID with pagination
 manufacturerRouter.get('/admin/:id', verifyToken, async (req, res) => {
     if (req.userDetail.role !== "admin") {
         return res.status(400).json({ msg: 'Access Denied' });
@@ -253,6 +272,12 @@ manufacturerRouter.get('/admin/:id', verifyToken, async (req, res) => {
 
     try {
         const { id } = req.params;
+        const { page = 1, limit = 10 } = req.query;
+
+        // Convert pagination parameters to integers
+        const pageNumber = parseInt(page, 10);
+        const pageSize = parseInt(limit, 10);
+        const skip = (pageNumber - 1) * pageSize;
 
         // Fetch the manufacturer
         const manufacturer = await ManufacturerModel.findById(id).select('-__v').lean();
@@ -260,10 +285,24 @@ manufacturerRouter.get('/admin/:id', verifyToken, async (req, res) => {
             return res.status(404).json({ msg: 'Manufacturer not found' });
         }
 
-        // Fetch products associated with the manufacturer
-        const products = await ProductModel.find({ manufacturerID: id }).lean();
+        // Fetch products associated with the manufacturer with pagination
+        const filters = { manufacturerID: id };
+        const totalProducts = await ProductModel.countDocuments(filters);
+        const totalPages = Math.ceil(totalProducts / pageSize);
 
-        manufacturer.products = products;
+        const products = await ProductModel.find(filters)
+            .skip(skip)
+            .limit(pageSize)
+            .lean();
+
+        // Attach paginated products to the manufacturer object
+        manufacturer.products = {
+            data: products,
+            totalProducts,
+            totalPages,
+            currentPage: pageNumber,
+            pageSize: pageSize
+        };
 
         res.status(200).json({ msg: 'Success', data: manufacturer });
     } catch (error) {
