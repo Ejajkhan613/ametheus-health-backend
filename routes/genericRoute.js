@@ -241,6 +241,12 @@ genericRoute.get('/admin/:id', verifyToken, async (req, res) => {
 
     try {
         const { id } = req.params;
+        const { page = 1, limit = 10 } = req.query;
+
+        // Convert pagination parameters to integers
+        const pageNumber = parseInt(page, 10);
+        const pageSize = parseInt(limit, 10);
+        const skip = (pageNumber - 1) * pageSize;
 
         // Fetch the generic by ID
         const generic = await GenericModel.findById(id).lean();
@@ -248,13 +254,27 @@ genericRoute.get('/admin/:id', verifyToken, async (req, res) => {
             return res.status(404).json({ msg: 'Generic not found' });
         }
 
-        // Fetch products associated with the genericID
-        // const products = await ProductModel.find({ genericID: id }).lean();
+        // Fetch products associated with the genericID with pagination
+        const filters = { genericID: id };
+        const totalProducts = await ProductModel.countDocuments(filters);
+        const totalPages = Math.ceil(totalProducts / pageSize);
 
-        // Attach products to the generic object
-        // generic.products = products;
+        const products = await ProductModel.find(filters)
+            .skip(skip)
+            .limit(pageSize)
+            .lean();
 
-        res.status(200).json({ msg: 'Success', data: generic });
+        generic.products = products;
+
+
+        res.status(200).json({
+            msg: 'Success',
+            data: generic,
+            totalProducts,
+            totalPages,
+            currentPage: pageNumber,
+            pageSize: pageSize
+        });
     } catch (error) {
         console.error('Error fetching generic:', error);
         res.status(500).json({ msg: 'Internal server error, try again later' });
