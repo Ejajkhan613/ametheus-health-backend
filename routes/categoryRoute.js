@@ -726,9 +726,9 @@ categoryRoute.get('/admin/slug/:slug', async (req, res) => {
             return res.status(404).send({ msg: 'Category not found' });
         }
 
-        // const products = await ProductModel.find({ categoryID: { $in: [category._id] } }).sort({ 'title': 1 }).lean();
+        const products = await ProductModel.find({ categoryID: { $in: [category._id] } }).sort({ 'title': 1 }).lean();
 
-        // category.products = products;
+        category.products = products;
 
         if (category.parent) {
             const parentData = await Category.findById(category.parent);
