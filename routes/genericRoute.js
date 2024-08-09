@@ -154,7 +154,12 @@ genericRoute.post('/rmid', verifyToken, async (req, res) => {
 genericRoute.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { country = 'INDIA', currency = 'INR' } = req.query;
+        const { country = 'INDIA', currency = 'INR', page = 1, limit = 10 } = req.query;
+
+        // Convert pagination parameters to integers
+        const pageNumber = parseInt(page, 10);
+        const pageSize = parseInt(limit, 10);
+        const skip = (pageNumber - 1) * pageSize;
 
         // Fetch the generic by ID
         const generic = await GenericModel.findById(id).lean();
@@ -207,7 +212,14 @@ genericRoute.get('/:id', async (req, res) => {
         // Attach products to the generic object
         generic.products = products;
 
-        res.status(200).json({ msg: 'Success', data: generic });
+        res.status(200).json({
+            msg: 'Success',
+            data: generic,
+            totalProducts,
+            totalPages,
+            currentPage: pageNumber,
+            pageSize: pageSize
+        });
     } catch (error) {
         console.error('Error fetching generic:', error);
         res.status(500).json({ msg: 'Internal server error, try again later' });
