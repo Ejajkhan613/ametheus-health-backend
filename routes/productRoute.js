@@ -631,6 +631,7 @@ productRoute.get('/admin/search/manufacturer', verifyToken, async (req, res) => 
         }
 
         const products = await ProductModel.find(filters)
+            .select("name manufacturer")
             .collation({ locale: 'en', strength: 2 })
             .lean();
 
