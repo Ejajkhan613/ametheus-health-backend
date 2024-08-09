@@ -610,7 +610,11 @@ categoryRoute.get('/:id', async (req, res) => {
 });
 
 // Get Category by its id
-categoryRoute.get('/admin/:id', async (req, res) => {
+categoryRoute.get('/admin/:id', verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).json({ msg: 'Access Denied' });
+    }
+
     try {
         const { id } = req.params;
         let category = await Category.findById(id).populate('children');
@@ -618,6 +622,10 @@ categoryRoute.get('/admin/:id', async (req, res) => {
             return res.status(404).send({ msg: 'Category not found' });
         }
         category = category.toObject();
+
+        // const products = await ProductModel.find({ categoryID: { $in: [category._id] } }).sort({ 'title': 1 }).lean();
+
+        // category.products = products;
 
         if (category.parent) {
             const parentData = await Category.findById(category.parent);
@@ -718,9 +726,9 @@ categoryRoute.get('/admin/slug/:slug', async (req, res) => {
             return res.status(404).send({ msg: 'Category not found' });
         }
 
-        const products = await ProductModel.find({ categoryID: { $in: [category._id] } }).sort({ 'title': 1 }).lean();
+        // const products = await ProductModel.find({ categoryID: { $in: [category._id] } }).sort({ 'title': 1 }).lean();
 
-        category.products = products;
+        // category.products = products;
 
         if (category.parent) {
             const parentData = await Category.findById(category.parent);

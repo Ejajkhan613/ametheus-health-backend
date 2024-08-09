@@ -230,10 +230,10 @@ genericRoute.get('/admin/:id', verifyToken, async (req, res) => {
         }
 
         // Fetch products associated with the genericID
-        const products = await ProductModel.find({ genericID: id }).lean();
+        // const products = await ProductModel.find({ genericID: id }).lean();
 
         // Attach products to the generic object
-        generic.products = products;
+        // generic.products = products;
 
         res.status(200).json({ msg: 'Success', data: generic });
     } catch (error) {
