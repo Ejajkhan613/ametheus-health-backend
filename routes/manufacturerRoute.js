@@ -179,7 +179,12 @@ manufacturerRouter.get('/names', async (req, res) => {
 manufacturerRouter.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { currency = 'INR', country = 'INDIA' } = req.query;
+        const { currency = 'INR', country = 'INDIA', page = 1, limit = 10 } = req.query;
+
+        // Convert pagination parameters to integers
+        const pageNumber = parseInt(page, 10);
+        const pageSize = parseInt(limit, 10);
+        const skip = (pageNumber - 1) * pageSize;
 
         // Fetch the manufacturer
         const manufacturer = await ManufacturerModel.findById(id).select('-__v').lean();
@@ -187,8 +192,15 @@ manufacturerRouter.get('/:id', async (req, res) => {
             return res.status(404).json({ msg: 'Manufacturer not found' });
         }
 
-        // Fetch products associated with the manufacturer
-        const products = await ProductModel.find({ manufacturerID: id, isVisible: true }).lean();
+        // Fetch products associated with the manufacturer with pagination
+        const filters = { manufacturerID: id, isVisible: true };
+        const totalProducts = await ProductModel.countDocuments(filters);
+        const totalPages = Math.ceil(totalProducts / pageSize);
+
+        const products = await ProductModel.find(filters)
+            .skip(skip)
+            .limit(pageSize)
+            .lean();
 
         // Fetch exchange rate based on user's selected currency
         let exchangeRate = { rate: 1 };
@@ -238,7 +250,14 @@ manufacturerRouter.get('/:id', async (req, res) => {
 
         manufacturer.products = products;
 
-        res.status(200).json({ msg: 'Success', data: manufacturer });
+        res.status(200).json({
+            msg: 'Success',
+            data: manufacturer,
+            totalProducts,
+            totalPages,
+            currentPage: pageNumber,
+            pageSize: pageSize
+        });
     } catch (error) {
         console.error('Error fetching manufacturer:', error);
         res.status(500).json({ msg: 'Internal server error, try again later' });
