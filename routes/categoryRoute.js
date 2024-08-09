@@ -684,12 +684,28 @@ categoryRoute.get('/admin/:id', verifyToken, async (req, res) => {
 categoryRoute.get('/slug/:slug', async (req, res) => {
     try {
         const { slug } = req.params;
+        const { page = 1, limit = 10 } = req.query;
+
+        // Convert pagination parameters to integers
+        const pageNumber = parseInt(page, 10);
+        const pageSize = parseInt(limit, 10);
+        const skip = (pageNumber - 1) * pageSize;
+
         let category = await Category.findOne({ slug }).populate('children').lean();
         if (!category) {
             return res.status(404).send({ msg: 'Category not found' });
         }
 
-        const products = await ProductModel.find({ categoryID: { $in: [category._id] }, isVisible: true }).sort({ 'title': 1 }).lean();
+        // Count total products for pagination
+        const totalProducts = await ProductModel.countDocuments({ categoryID: { $in: [category._id] }, isVisible: true });
+        const totalPages = Math.ceil(totalProducts / pageSize);
+
+        // Fetch products associated with the category with pagination
+        const products = await ProductModel.find({ categoryID: { $in: [category._id] }, isVisible: true })
+            .sort({ 'title': 1 })
+            .skip(skip)
+            .limit(pageSize)
+            .lean();
 
         // Fetch exchange rate based on user's selected currency
         let exchangeRate = { rate: 1 };
@@ -735,6 +751,10 @@ categoryRoute.get('/slug/:slug', async (req, res) => {
         });
 
         category.products = products;
+        category.totalProducts = totalProducts;
+        category.totalPages = totalPages;
+        category.currentPage = pageNumber;
+        category.pageSize = pageSize;
 
         if (category.parent) {
             const parentData = await Category.findById(category.parent);
@@ -757,14 +777,34 @@ categoryRoute.get('/slug/:slug', async (req, res) => {
 categoryRoute.get('/admin/slug/:slug', async (req, res) => {
     try {
         const { slug } = req.params;
+        const { page = 1, limit = 10 } = req.query;
+
+        // Convert pagination parameters to integers
+        const pageNumber = parseInt(page, 10);
+        const pageSize = parseInt(limit, 10);
+        const skip = (pageNumber - 1) * pageSize;
+
         let category = await Category.findOne({ slug }).populate('children').lean();
         if (!category) {
             return res.status(404).send({ msg: 'Category not found' });
         }
 
-        const products = await ProductModel.find({ categoryID: { $in: [category._id] } }).sort({ 'title': 1 }).lean();
+        // Count total products for pagination
+        const totalProducts = await ProductModel.countDocuments({ categoryID: { $in: [category._id] } });
+        const totalPages = Math.ceil(totalProducts / pageSize);
+
+        // Fetch products associated with the category with pagination
+        const products = await ProductModel.find({ categoryID: { $in: [category._id] } })
+            .sort({ 'title': 1 })
+            .skip(skip)
+            .limit(pageSize)
+            .lean();
 
         category.products = products;
+        category.totalProducts = totalProducts;
+        category.totalPages = totalPages;
+        category.currentPage = pageNumber;
+        category.pageSize = pageSize;
 
         if (category.parent) {
             const parentData = await Category.findById(category.parent);
