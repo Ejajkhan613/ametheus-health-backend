@@ -265,10 +265,10 @@ manufacturerRouter.get('/:id', async (req, res) => {
 });
 
 // Get a manufacturer by ID
-manufacturerRouter.get('/admin/:id', verifyToken, async (req, res) => {
-    if (req.userDetail.role !== "admin") {
-        return res.status(400).json({ msg: 'Access Denied' });
-    }
+manufacturerRouter.get('/admin/:id', async (req, res) => {
+    // if (req.userDetail.role !== "admin") {
+    //     return res.status(400).json({ msg: 'Access Denied' });
+    // }
 
     try {
         const { id } = req.params;
