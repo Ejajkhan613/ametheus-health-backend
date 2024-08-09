@@ -535,7 +535,7 @@ categoryRoute.get('/hierarchy-names', async (req, res) => {
     }
 });
 
-// Get Category by its id with pagination and currency added
+// Get Category by its id (currency added)
 categoryRoute.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -545,12 +545,7 @@ categoryRoute.get('/:id', async (req, res) => {
         }
         category = category.toObject();
 
-        // Pagination parameters
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const skip = (page - 1) * limit;
-
-        const filters = { categoryID: { $in: [id] }, isVisible: true };
+        const products = await ProductModel.find({ categoryID: { $in: [id] }, isVisible: true }).lean();
 
         // Fetch exchange rate based on user's selected currency
         let exchangeRate = { rate: 1 };
@@ -568,15 +563,6 @@ categoryRoute.get('/:id', async (req, res) => {
                 return res.status(400).send({ msg: 'Currency not supported' });
             }
         }
-
-        // Fetch and paginate products
-        const totalProducts = await ProductModel.countDocuments(filters);
-        const totalPages = Math.ceil(totalProducts / limit);
-
-        const products = await ProductModel.find(filters)
-            .skip(skip)
-            .limit(limit)
-            .lean();
 
         // Adjust product prices based on exchange rate and country selection
         products.forEach(product => {
@@ -609,104 +595,56 @@ categoryRoute.get('/:id', async (req, res) => {
         if (category.parent) {
             const parentData = await Category.findById(category.parent);
             if (!parentData) {
-                return res.status(200).send({
-                    data: category,
-                    totalProducts,
-                    totalPages,
-                    currentPage: page,
-                    pageSize: limit
-                });
+                return res.status(200).send(category);
             }
             category.parentName = parentData.name;
             category.parentSlug = parentData.slug;
-            return res.status(200).send({
-                data: category,
-                totalProducts,
-                totalPages,
-                currentPage: page,
-                pageSize: limit
-            });
+            return res.status(200).send(category);
         }
 
-        return res.status(200).send({
-            data: category,
-            totalProducts,
-            totalPages,
-            currentPage: page,
-            pageSize: limit
-        });
+        return res.status(200).send(category);
     } catch (error) {
         console.error('Error fetching category:', error);
         return res.status(500).send({ msg: 'Internal server error, try again later' });
     }
 });
 
-// Get Category by its id with pagination
-categoryRoute.get('/admin/:id', async (req, res) => {
+// Get Category by its id
+categoryRoute.get('/admin/:id', verifyToken, async (req, res) => {
+    if (req.userDetail.role !== "admin") {
+        return res.status(400).json({ msg: 'Access Denied' });
+    }
+
     try {
         const { id } = req.params;
-        const { page = 1, limit = 10 } = req.query;
-
-        // Convert pagination parameters to integers
-        const pageNumber = parseInt(page, 10);
-        const pageSize = parseInt(limit, 10);
-        const skip = (pageNumber - 1) * pageSize;
-
-        // Fetch the category by ID
         let category = await Category.findById(id).populate('children');
         if (!category) {
             return res.status(404).send({ msg: 'Category not found' });
         }
         category = category.toObject();
 
-        // Fetch products associated with the category with pagination
-        const filters = { categoryID: { $in: [id] } };
-        const totalProducts = await ProductModel.countDocuments(filters);
-        const totalPages = Math.ceil(totalProducts / pageSize);
+        // const products = await ProductModel.find({ categoryID: { $in: [category._id] } }).sort({ 'title': 1 }).lean();
 
-        const products = await ProductModel.find(filters)
-            .skip(skip)
-            .limit(pageSize)
-            .lean();
-
-        category.products = products;
+        // category.products = products;
 
         if (category.parent) {
             const parentData = await Category.findById(category.parent);
             if (!parentData) {
-                return res.status(200).send({
-                    data: category,
-                    totalProducts,
-                    totalPages,
-                    currentPage: pageNumber,
-                    pageSize: pageSize
-                });
+                return res.status(200).send(category);
             }
             category.parentName = parentData.name;
             category.parentSlug = parentData.slug;
-            return res.status(200).send({
-                data: category,
-                totalProducts,
-                totalPages,
-                currentPage: pageNumber,
-                pageSize: pageSize
-            });
+            return res.status(200).send(category);
         }
 
-        return res.status(200).send({
-            data: category,
-            totalProducts,
-            totalPages,
-            currentPage: pageNumber,
-            pageSize: pageSize
-        });
+        return res.status(200).send(category);
     } catch (error) {
         console.error('Error fetching category:', error);
         return res.status(500).send({ msg: 'Internal server error, try again later' });
     }
 });
 
-// Get Category by its slug with pagination and currency added
+// Get Category by its slug (currency added)
 categoryRoute.get('/slug/:slug', async (req, res) => {
     try {
         const { slug } = req.params;
@@ -715,12 +653,7 @@ categoryRoute.get('/slug/:slug', async (req, res) => {
             return res.status(404).send({ msg: 'Category not found' });
         }
 
-        // Pagination parameters
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const skip = (page - 1) * limit;
-
-        const filters = { categoryID: { $in: [category._id] }, isVisible: true };
+        const products = await ProductModel.find({ categoryID: { $in: [category._id] }, isVisible: true }).sort({ 'title': 1 }).lean();
 
         // Fetch exchange rate based on user's selected currency
         let exchangeRate = { rate: 1 };
@@ -738,16 +671,6 @@ categoryRoute.get('/slug/:slug', async (req, res) => {
                 return res.status(400).send({ msg: 'Currency not supported' });
             }
         }
-
-        // Fetch and paginate products
-        const totalProducts = await ProductModel.countDocuments(filters);
-        const totalPages = Math.ceil(totalProducts / limit);
-
-        const products = await ProductModel.find(filters)
-            .skip(skip)
-            .limit(limit)
-            .sort({ 'title': 1 })
-            .lean();
 
         // Adjust product prices based on exchange rate and country selection
         products.forEach(product => {
@@ -780,39 +703,21 @@ categoryRoute.get('/slug/:slug', async (req, res) => {
         if (category.parent) {
             const parentData = await Category.findById(category.parent);
             if (!parentData) {
-                return res.status(200).send({
-                    data: category,
-                    totalProducts,
-                    totalPages,
-                    currentPage: page,
-                    pageSize: limit
-                });
+                return res.status(200).send(category);
             }
             category.parentName = parentData.name;
             category.parentSlug = parentData.slug;
-            return res.status(200).send({
-                data: category,
-                totalProducts,
-                totalPages,
-                currentPage: page,
-                pageSize: limit
-            });
+            return res.status(200).send(category);
         }
 
-        return res.status(200).send({
-            data: category,
-            totalProducts,
-            totalPages,
-            currentPage: page,
-            pageSize: limit
-        });
+        return res.status(200).send(category);
     } catch (error) {
         console.error('Error fetching category:', error);
         return res.status(500).send({ msg: 'Internal server error, try again later' });
     }
 });
 
-// Get Category by its slug with pagination and currency added (admin)
+// Get Category by its slug (currency added)
 categoryRoute.get('/admin/slug/:slug', async (req, res) => {
     try {
         const { slug } = req.params;
@@ -821,60 +726,26 @@ categoryRoute.get('/admin/slug/:slug', async (req, res) => {
             return res.status(404).send({ msg: 'Category not found' });
         }
 
-        // Pagination parameters
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const skip = (page - 1) * limit;
-
-        const filters = { categoryID: { $in: [category._id] } };
-
-        // Fetch products with pagination
-        const totalProducts = await ProductModel.countDocuments(filters);
-        const totalPages = Math.ceil(totalProducts / limit);
-
-        const products = await ProductModel.find(filters)
-            .skip(skip)
-            .limit(limit)
-            .sort({ 'title': 1 })
-            .lean();
+        const products = await ProductModel.find({ categoryID: { $in: [category._id] } }).sort({ 'title': 1 }).lean();
 
         category.products = products;
 
         if (category.parent) {
             const parentData = await Category.findById(category.parent);
             if (!parentData) {
-                return res.status(200).send({
-                    data: category,
-                    totalProducts,
-                    totalPages,
-                    currentPage: page,
-                    pageSize: limit
-                });
+                return res.status(200).send(category);
             }
             category.parentName = parentData.name;
             category.parentSlug = parentData.slug;
-            return res.status(200).send({
-                data: category,
-                totalProducts,
-                totalPages,
-                currentPage: page,
-                pageSize: limit
-            });
+            return res.status(200).send(category);
         }
 
-        return res.status(200).send({
-            data: category,
-            totalProducts,
-            totalPages,
-            currentPage: page,
-            pageSize: limit
-        });
+        return res.status(200).send(category);
     } catch (error) {
         console.error('Error fetching category:', error);
         return res.status(500).send({ msg: 'Internal server error, try again later' });
     }
 });
-
 
 // Delete Category along with Image and Document
 categoryRoute.delete('/:id', verifyToken, async (req, res) => {

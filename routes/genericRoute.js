@@ -150,22 +150,20 @@ genericRoute.post('/rmid', verifyToken, async (req, res) => {
     }
 });
 
-// GET a generic by ID with pagination and currency conversion (including all products with the same genericID)
+// GET a generic by ID (with all products who have the same genericID)
 genericRoute.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { country = 'INDIA', currency = 'INR', page = 1, limit = 10 } = req.query;
-
-        // Convert pagination parameters to integers
-        const pageNumber = parseInt(page, 10);
-        const pageSize = parseInt(limit, 10);
-        const skip = (pageNumber - 1) * pageSize;
+        const { country = 'INDIA', currency = 'INR' } = req.query;
 
         // Fetch the generic by ID
         const generic = await GenericModel.findById(id).lean();
         if (!generic) {
             return res.status(404).json({ msg: 'Generic not found' });
         }
+
+        // Fetch products associated with the genericID
+        const products = await ProductModel.find({ genericID: id, isVisible: true }).lean();
 
         // Fetch exchange rate based on user's selected currency
         let exchangeRate = { rate: 1 };
@@ -180,19 +178,6 @@ genericRoute.get('/:id', async (req, res) => {
                 return res.status(400).json({ msg: 'Currency not supported' });
             }
         }
-
-        // Filters for product query
-        const filters = { genericID: id, isVisible: true };
-
-        // Count documents for pagination
-        const totalProducts = await ProductModel.countDocuments(filters);
-        const totalPages = Math.ceil(totalProducts / pageSize);
-
-        // Fetch paginated products
-        const products = await ProductModel.find(filters)
-            .skip(skip)
-            .limit(pageSize)
-            .lean();
 
         // Adjust product prices based on exchange rate and country selection
         products.forEach(product => {
@@ -219,23 +204,17 @@ genericRoute.get('/:id', async (req, res) => {
             });
         });
 
-        generic.product = products;
+        // Attach products to the generic object
+        generic.products = products;
 
-        // Attach paginated products to the generic object
-        res.status(200).json({
-            data: generic,
-            totalProducts,
-            totalPages,
-            currentPage: pageNumber,
-            pageSize: pageSize
-        });
+        res.status(200).json({ msg: 'Success', data: generic });
     } catch (error) {
         console.error('Error fetching generic:', error);
         res.status(500).json({ msg: 'Internal server error, try again later' });
     }
 });
 
-// GET a generic by ID with pagination and admin access (including all products with the same genericID)
+// GET a generic by ID (with all products who have the same genericID)
 genericRoute.get('/admin/:id', verifyToken, async (req, res) => {
     if (req.userDetail.role !== "admin") {
         return res.status(400).json({ msg: 'Access Denied' });
@@ -243,12 +222,6 @@ genericRoute.get('/admin/:id', verifyToken, async (req, res) => {
 
     try {
         const { id } = req.params;
-        const { page = 1, limit = 10 } = req.query;
-
-        // Convert pagination parameters to integers
-        const pageNumber = parseInt(page, 10);
-        const pageSize = parseInt(limit, 10);
-        const skip = (pageNumber - 1) * pageSize;
 
         // Fetch the generic by ID
         const generic = await GenericModel.findById(id).lean();
@@ -256,29 +229,13 @@ genericRoute.get('/admin/:id', verifyToken, async (req, res) => {
             return res.status(404).json({ msg: 'Generic not found' });
         }
 
-        // Filters for product query
-        const filters = { genericID: id };
+        // Fetch products associated with the genericID
+        // const products = await ProductModel.find({ genericID: id }).lean();
 
-        // Count documents for pagination
-        const totalProducts = await ProductModel.countDocuments(filters);
-        const totalPages = Math.ceil(totalProducts / pageSize);
+        // Attach products to the generic object
+        // generic.products = products;
 
-        // Fetch paginated products
-        const products = await ProductModel.find(filters)
-            .skip(skip)
-            .limit(pageSize)
-            .lean();
-
-        generic.product = products;
-
-        // Attach paginated products to the generic object
-        res.status(200).json({
-            data: generic,
-            totalProducts,
-            totalPages,
-            currentPage: pageNumber,
-            pageSize: pageSize
-        });
+        res.status(200).json({ msg: 'Success', data: generic });
     } catch (error) {
         console.error('Error fetching generic:', error);
         res.status(500).json({ msg: 'Internal server error, try again later' });
