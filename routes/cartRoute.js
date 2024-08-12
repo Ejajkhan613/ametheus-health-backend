@@ -141,6 +141,7 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
             
             // Find the specific variant in the product
             let variant = product.variants.id(variantID);
+            console.log(variant);
             if (!variant) {
                 continue;
             }
