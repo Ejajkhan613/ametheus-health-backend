@@ -134,13 +134,13 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
         // Process each item in the batch
         for (const { productID, variantID, quantity } of itemss) {
             // Fetch the product by productID
-            const product = await ProductModel.findById(productID);
+            let product = await ProductModel.findById(productID);
             if (!product) {
                 continue;
             }
 
             // Find the specific variant in the product
-            const variant = product.variants.id(variantID);
+            let variant = product.variants.id(variantID);
             if (!variant) {
                 continue;
             }
@@ -150,7 +150,7 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
                 continue;
             }
 
-            if (variant.price === 0) {
+            if (variant.price === 0 && variant.salePrice) {
                 continue;
             }
 
@@ -230,8 +230,8 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
         }
 
         // Upsert or update cart details if no errors
-        await CartModel.findOneAndUpdate({ userID: userId }, { cartDetails }, { upsert: true, new: true });
-
+        let dataaa = await CartModel.findOneAndUpdate({ userID: userId }, { cartDetails }, { upsert: true, new: true });
+        console.log(dataaa);
         // Send success response
         res.status(200).json({
             msg: 'Success'
@@ -484,7 +484,6 @@ router.post('/', verifyToken, async (req, res) => {
         res.status(500).json({ message: 'Error while adding product to cart' });
     }
 });
-
 
 // Get all cart details with prices
 router.get('/', verifyToken, async (req, res) => {
