@@ -484,4 +484,25 @@ router.get('/user/orders', verifyToken, async (req, res) => {
     }
 });
 
+// Route to get past purchases for a user
+router.get('/user/orders/:id', verifyToken, async (req, res) => {
+    try {
+        const userID = req.userDetail._id;
+
+        // Fetch orders
+        const orders = await Order.findById(req.query.id);
+        if (!orders) {
+            return res.status(400).send({ msg: "Order Not Found" });
+        }
+        if (orders.userID.toString() != userID.toString()) {
+            return res.status(400).send({ msg: "Order Not Found..." });
+        }
+
+        res.json(orders);
+    } catch (error) {
+        console.error('Error fetching user orders:', error);
+        res.status(500).send('Internal Server Error');
+    }
+});
+
 module.exports = router;
