@@ -732,14 +732,17 @@ categoryRoute.get('/slug/:slug', async (req, res) => {
                 const margin = variant.margin / 100 || 0.01;
 
                 if (country === 'INDIA') {
-                    if (exchangeRate.rate !== 1) { // Currency other than INR
-                        variant.price = Number((indianMRP * exchangeRate.rate).toFixed(2));
-                        variant.salePrice = Number((indianSaleMRP * exchangeRate.rate).toFixed(2));
-                    } else {
-                        variant.price = Number(indianMRP.toFixed(2));
-                        variant.salePrice = Number(indianSaleMRP.toFixed(2));
-                    }
-                } else { // OUTSIDE INDIA
+                    // Apply 12% discount for India
+                    const discount = 0.12;
+                    variant.price = Number(((indianMRP * (1 - discount)) * exchangeRate.rate).toFixed(2));
+                    variant.salePrice = Number(((indianSaleMRP * (1 - discount)) * exchangeRate.rate).toFixed(2));
+                } else if (['NEPAL', 'BANGLADESH'].includes(country)) {
+                    // Apply 20% margin for Nepal and Bangladesh
+                    const marginPercentage = 0.20;
+                    variant.price = Number(((indianMRP * (1 + marginPercentage)) * exchangeRate.rate).toFixed(2));
+                    variant.salePrice = Number(((indianSaleMRP * (1 + marginPercentage)) * exchangeRate.rate).toFixed(2));
+                } else {
+                    // Apply margin from variant.margin for other countries
                     const priceWithMargin = indianMRP * (1 + margin);
                     const salePriceWithMargin = indianSaleMRP * (1 + margin);
 
@@ -772,6 +775,7 @@ categoryRoute.get('/slug/:slug', async (req, res) => {
         return res.status(500).send({ msg: 'Internal server error, try again later' });
     }
 });
+
 
 // Get Category by its slug (currency added)
 categoryRoute.get('/admin/slug/:slug', async (req, res) => {
