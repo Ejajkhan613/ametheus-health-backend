@@ -145,7 +145,6 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
             if (!variant) {
                 continue;
             }
-            console.log(productID);
 
             // Check if the product and variant meet the required conditions
             if (variant.isStockAvailable == false) {
@@ -233,7 +232,7 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
 
         // Upsert or update cart details if no errors
         let dataaa = await CartModel.findOneAndUpdate({ userID: userId }, { cartDetails }, { upsert: true, new: true });
-        console.log(dataaa);
+        
         // Send success response
         res.status(200).json({
             msg: 'Success'
@@ -567,7 +566,7 @@ router.get('/', verifyToken, async (req, res) => {
             return total;
         }, 0);
 
-        totalPriceInINR = totalPriceInINR <= 0 ? 0.1 : totalPriceInINR;
+        totalPriceInINR = totalPriceInINR <= 0 ? 0 : totalPriceInINR;
 
         // Determine delivery charge based on total price in INR
         let deliveryChargeInINR = 0;
