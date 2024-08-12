@@ -63,8 +63,6 @@ const deleteFileFromS3 = async (fileUrl) => {
     await s3Client.send(new DeleteObjectCommand(deleteParams));
 };
 
-
-
 // Add Category (initially without image or docFileURL)
 categoryRoute.post('/', [
     body('name').notEmpty().withMessage('Category name is required'),
@@ -779,7 +777,6 @@ categoryRoute.get('/slug/:slug', async (req, res) => {
     }
 });
 
-
 // Get Category by its slug (currency added)
 categoryRoute.get('/admin/slug/:slug', async (req, res) => {
     try {
@@ -880,6 +877,5 @@ categoryRoute.delete('/:id', verifyToken, async (req, res) => {
         return res.status(500).send({ msg: 'Internal server error, try again later' });
     }
 });
-
 
 module.exports = categoryRoute;

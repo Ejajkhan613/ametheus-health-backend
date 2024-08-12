@@ -138,7 +138,7 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
             if (!product) {
                 continue;
             }
-            
+
             // Find the specific variant in the product
             let variant = product.variants.id(variantID);
             console.log(variant, variantID);
@@ -546,7 +546,6 @@ router.get('/', verifyToken, async (req, res) => {
 
         // Calculate the total price of the cart in INR
         let totalPriceInINR = cart.cartDetails.reduce((total, item) => {
-            let marginValue = item.variantDetail.margin / 100;
 
             // Use base price (salePrice or price) for calculation
             let itemPrice;
@@ -558,7 +557,7 @@ router.get('/', verifyToken, async (req, res) => {
                 // NON-INDIA
                 let marginPercentage = item.variantDetail.margin / 100;
                 if (['BANGLADESH', 'NEPAL'].includes(country)) {
-                    marginPercentage = 20 / 100; // Specific margin for Bangladesh and Nepal
+                    marginPercentage = 20 / 100;
                 }
                 itemPrice = item.variantDetail.salePrice !== 0 ? (item.variantDetail.salePrice + (item.variantDetail.salePrice * marginPercentage)) : (item.variantDetail.price + (item.variantDetail.price * marginPercentage));
             }
@@ -615,9 +614,13 @@ router.get('/', verifyToken, async (req, res) => {
             let convertedSalePrice = item.variantDetail.salePrice;
 
             if (country === "INDIA") {
+                // Apply a 12% discount if the country is India
                 if (currency !== "INR") {
-                    convertedPrice = (item.variantDetail.price * exchangeRate.rate).toFixed(2);
-                    convertedSalePrice = item.variantDetail.salePrice !== 0 ? (item.variantDetail.salePrice * exchangeRate.rate).toFixed(2) : 0;
+                    convertedPrice = ((item.variantDetail.price * (1 - 0.12)) * exchangeRate.rate).toFixed(2);
+                    convertedSalePrice = item.variantDetail.salePrice !== 0 ? ((item.variantDetail.salePrice * (1 - 0.12)) * exchangeRate.rate).toFixed(2) : 0;
+                } else {
+                    convertedPrice = (item.variantDetail.price * (1 - 0.12)).toFixed(2);
+                    convertedSalePrice = item.variantDetail.salePrice !== 0 ? (item.variantDetail.salePrice * (1 - 0.12)).toFixed(2) : 0;
                 }
             } else {
                 // NON-INDIA
