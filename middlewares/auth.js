@@ -16,7 +16,7 @@ const verifyToken = async (req, res, next) => {
       return res.status(400).send({ message: "Not authorized, id and token do not match" });
     }
 
-    req.userDetail = await User.findById(decoded.userID);
+    req.userDetail = await User.findById(decoded.userID).lean();
     if (!req.userDetail) {
       return res.status(404).json({ message: 'Account not matched' });
     }

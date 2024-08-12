@@ -245,7 +245,15 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
 
 // Calculate the converted price and salePrice for cart items
 router.post('/', verifyToken, async (req, res) => {
-    const { productID, variantID, quantity, country = "INDIA", currency = "INR" } = req.body;
+    const { productID, variantID, quantity, country, currency } = req.body;
+
+    if (country == "null" || country == "undefined" || country == null || country == undefined) {
+        country = 'INDIA';
+    }
+
+    if (currency == "null" || currency == "undefined" || currency == null || currency == undefined) {
+        currency = 'INR';
+    }
 
     try {
         // Fetch the product by productID
@@ -266,7 +274,7 @@ router.post('/', verifyToken, async (req, res) => {
 
         // Check if the product and variant meet the required conditions
         if (!variant.isStockAvailable || variant.price === 0 || !product.isVisible || product.isDiscontinued) {
-            return { productID, variantID, quantity, error: 'This Medicine cannot be added due to stock, price, or visibility constraints' };
+            return res.status(400).json({ message: 'This Medicine cannot be added due to stock, price, or visibility constraints' });
         }
 
         // Check if the quantity is within the specified limits
@@ -357,73 +365,65 @@ router.post('/', verifyToken, async (req, res) => {
             }
         }
 
-        // Calculate the total price of the cart
-        let totalPrice = cart.cartDetails.reduce((total, item) => {
-            let itemPrice;
+        // Calculate the total price of the cart in INR
+        let totalPriceInINR = cart.cartDetails.reduce((total, item) => {
+            let marginValue = item.variantDetail.margin / 100;
 
+            // Use base price (salePrice or price) for calculation
+            let itemPrice;
             if (country === "INDIA") {
-                if (currency !== "INR") {
-                    if (item.variantDetail.salePrice !== 0) {
-                        itemPrice = (item.variantDetail.salePrice * exchangeRate.rate).toFixed(2);
-                    } else {
-                        itemPrice = (item.variantDetail.price * exchangeRate.rate).toFixed(2);
-                    }
-                } else {
-                    itemPrice = item.variantDetail.salePrice !== 0 ? item.variantDetail.salePrice : item.variantDetail.price;
-                }
+                // Apply discount in India
+                const discount = 12 / 100;
+                itemPrice = item.variantDetail.salePrice !== 0 ? (item.variantDetail.salePrice * (1 - discount)) : (item.variantDetail.price * (1 - discount));
             } else {
                 // NON-INDIA
-                const marginPercentage = item.variantDetail.margin / 100;
-                if (currency !== "INR") {
-                    if (item.variantDetail.salePrice !== 0) {
-                        itemPrice = ((item.variantDetail.salePrice + (item.variantDetail.salePrice * marginPercentage)) * exchangeRate.rate).toFixed(2);
-                    } else {
-                        itemPrice = ((item.variantDetail.price + (item.variantDetail.price * marginPercentage)) * exchangeRate.rate).toFixed(2);
-                    }
-                } else {
-                    if (item.variantDetail.salePrice !== 0) {
-                        itemPrice = ((item.variantDetail.salePrice + (item.variantDetail.salePrice * marginPercentage))).toFixed(2);
-                    } else {
-                        itemPrice = ((item.variantDetail.price + (item.variantDetail.price * marginPercentage))).toFixed(2);
-                    }
+                let marginPercentage = item.variantDetail.margin / 100;
+                if (['BANGLADESH', 'NEPAL'].includes(country)) {
+                    marginPercentage = 20 / 100; // Specific margin for Bangladesh and Nepal
                 }
+                itemPrice = item.variantDetail.salePrice !== 0 ? (item.variantDetail.salePrice + (item.variantDetail.salePrice * marginPercentage)) : (item.variantDetail.price + (item.variantDetail.price * marginPercentage));
             }
 
-            const added = itemPrice * item.quantity;
-            const latest = total + added;
-            return latest;
+            const value = parseFloat(itemPrice) * item.quantity;
+            total += value;
+            return total;
         }, 0);
 
-        // Determine delivery charge based on country
-        let deliveryCharge = 0;
+        totalPriceInINR = totalPriceInINR <= 0 ? 0.1 : totalPriceInINR;
+
+        // Determine delivery charge based on total price in INR
+        let deliveryChargeInINR = 0;
         if (country === 'INDIA') {
-            if (totalPrice > 0 && totalPrice < 500) {
-                deliveryCharge = 99;
-            } else if (totalPrice >= 500 && totalPrice < 1000) {
-                deliveryCharge = 59;
-            } else if (totalPrice >= 1000) {
-                deliveryCharge = 0;
+            if (totalPriceInINR > 0 && totalPriceInINR < 500) {
+                deliveryChargeInINR = 99;
+            } else if (totalPriceInINR >= 500 && totalPriceInINR < 1000) {
+                deliveryChargeInINR = 59;
+            } else if (totalPriceInINR >= 1000) {
+                deliveryChargeInINR = 0;
             }
+        } else if (['BANGLADESH', 'NEPAL'].includes(country)) {
+            deliveryChargeInINR = 3107;
         } else {
-            if (totalPrice > 0 && totalPrice < 4177.78) {
-                deliveryCharge = 4178.62;
-            } else if (totalPrice >= 4177.78 && totalPrice < 16713.64) {
-                deliveryCharge = 3342.90;
-            } else if (totalPrice >= 16713.65) {
-                deliveryCharge = 0;
+            if (totalPriceInINR > 0 && totalPriceInINR < 4177.78) {
+                deliveryChargeInINR = 4178.62;
+            } else if (totalPriceInINR >= 4177.78 && totalPriceInINR < 16713.64) {
+                deliveryChargeInINR = 3342.90;
+            } else if (totalPriceInINR >= 16713.65) {
+                deliveryChargeInINR = 0;
             }
         }
 
         // Convert delivery charge to the selected currency
-        let deliveryChargeInCurrency = deliveryCharge;
+        let deliveryChargeInCurrency = deliveryChargeInINR;
         if (currency !== 'INR') {
-            deliveryChargeInCurrency = (deliveryCharge * exchangeRate.rate).toFixed(2);
+            deliveryChargeInCurrency = (deliveryChargeInINR * exchangeRate.rate).toFixed(2);
         }
 
-        const totalCartPrice = (parseFloat(totalPrice) + parseFloat(deliveryChargeInCurrency)).toFixed(2);
+        // Calculate total cart price in selected currency
+        const totalCartPriceInCurrency = (parseFloat(totalPriceInINR) + parseFloat(deliveryChargeInINR) * exchangeRate.rate).toFixed(2);
 
         // Convert numbers to strings with two decimal places
-        totalPrice = parseFloat(totalPrice).toFixed(2);
+        let totalPrice = (parseFloat(totalPriceInINR) * exchangeRate.rate).toFixed(2);
         deliveryChargeInCurrency = parseFloat(deliveryChargeInCurrency).toFixed(2);
 
         // Update cart details with converted prices and currency symbol
@@ -440,19 +440,19 @@ router.post('/', verifyToken, async (req, res) => {
                 // NON-INDIA
                 const marginPercentage = item.variantDetail.margin / 100;
 
-                if (item.variantDetail.salePrice !== 0) {
+                // Apply specific margin for Bangladesh and Nepal
+                if (['BANGLADESH', 'NEPAL'].includes(country)) {
+                    convertedPrice = (item.variantDetail.price + (item.variantDetail.price * 0.20)).toFixed(2); // 20% margin
+                    convertedSalePrice = (item.variantDetail.salePrice + (item.variantDetail.salePrice * 0.20)).toFixed(2); // 20% margin
+                } else {
                     convertedPrice = ((item.variantDetail.price + (item.variantDetail.price * marginPercentage))).toFixed(2);
                     convertedSalePrice = ((item.variantDetail.salePrice + (item.variantDetail.salePrice * marginPercentage))).toFixed(2);
-                } else {
-                    convertedPrice = (
-                        (item.variantDetail.price + (item.variantDetail.price * marginPercentage))
-                    ).toFixed(2);
-                    convertedSalePrice = 0;
                 }
 
-                // Convert to selected currency
-                convertedPrice = (convertedPrice * exchangeRate.rate).toFixed(2);
-                convertedSalePrice = (convertedSalePrice * exchangeRate.rate).toFixed(2);
+                if (currency !== "INR") {
+                    convertedPrice = (convertedPrice * exchangeRate.rate).toFixed(2);
+                    convertedSalePrice = (convertedSalePrice * exchangeRate.rate).toFixed(2);
+                }
             }
 
             return {
@@ -461,7 +461,8 @@ router.post('/', verifyToken, async (req, res) => {
                     ...item.variantDetail,
                     price: convertedPrice,
                     salePrice: convertedSalePrice,
-                    currency: exchangeRate.currency === 'AED' ? exchangeRate.currency : exchangeRate.symbol
+                    currency: exchangeRate.symbol,
+                    currencyCode: currency
                 }
             };
         });
@@ -474,7 +475,7 @@ router.post('/', verifyToken, async (req, res) => {
             cart: cart.cartDetails,
             totalPrice,
             deliveryCharge: deliveryChargeInCurrency,
-            totalCartPrice,
+            totalCartPrice: totalCartPriceInCurrency,
             currency: exchangeRate.symbol
         });
 
@@ -483,6 +484,7 @@ router.post('/', verifyToken, async (req, res) => {
         res.status(500).json({ message: 'Error while adding product to cart' });
     }
 });
+
 
 // Get all cart details with prices
 router.get('/', verifyToken, async (req, res) => {

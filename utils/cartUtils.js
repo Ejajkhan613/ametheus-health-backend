@@ -128,7 +128,7 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
                 deliveryChargeInINR = 0;
             }
         } else if (['BANGLADESH', 'NEPAL'].includes(country)) {
-            deliveryChargeInINR = 3107; // Specific delivery charge for Bangladesh and Nepal
+            deliveryChargeInINR = 3107;
         } else {
             if (totalPriceInINR > 0 && totalPriceInINR < 4177.78) {
                 deliveryChargeInINR = 4178.62;
@@ -153,7 +153,6 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
         let totalPrice = (parseFloat(totalPriceInINR) * exchangeRate.rate).toFixed(2);
         deliveryChargeInCurrency = parseFloat(deliveryChargeInCurrency).toFixed(2);
 
-        console.log(totalCartPriceInCurrency);
         // Return the results
         return {
             requiresPrescription,
@@ -162,7 +161,6 @@ const calculateTotalCartPrice = async (userID, country, currency) => {
             deliveryCharge: deliveryChargeInCurrency.toString(),
             totalPrice: totalPrice.toString()
         };
-
     } catch (error) {
         console.error('Error calculating cart price:', error);
         throw new Error('Error calculating cart price');

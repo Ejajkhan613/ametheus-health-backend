@@ -477,7 +477,19 @@ productRoute.delete('/:id', verifyToken, async (req, res) => {
 // Route to fetch all products with pagination, filtering, and sorting (currency added)
 productRoute.get('/search/', async (req, res) => {
     try {
-        const { search = '' } = req.query;
+        const { search, sortBy = 'title', order = 'asc', country, currency } = req.query;
+
+        if (search == "" || search == "null" || search == "undefined" || search == null || search == undefined) {
+            search = 'dabur';
+        }
+
+        if (country == "" || country == "null" || country == "undefined" || country == null || country == undefined) {
+            country = 'INDIA';
+        }
+
+        if (currency == "" || currency == "null" || currency == "undefined" || currency == null || currency == undefined) {
+            currency = 'INR';
+        }
 
         const filters = { isVisible: true };
 
@@ -488,6 +500,7 @@ productRoute.get('/search/', async (req, res) => {
                 { title: new RegExp(search, 'i') },
                 { slug: new RegExp(search, 'i') },
                 { treatment: new RegExp(search, 'i') },
+                { manufacturer: new RegExp(search, 'i') },
                 { originCountry: new RegExp(search, 'i') },
                 { tags: new RegExp(search, 'i') },
                 { 'variants.sku': new RegExp(search, 'i') },
@@ -495,30 +508,35 @@ productRoute.get('/search/', async (req, res) => {
             ];
             if (isValidObjectId(search)) {
                 filters.$or.push({ genericID: search });
-                filters.$or.push({ categoryID: { $in: [search] } });
+                filters.$or.push({ categoryID: search });
                 filters.$or.push({ manufacturerID: search });
                 filters.$or.push({ _id: search });
             }
         }
 
-        // Fetch exchange rate based on user's selected currency
-        let exchangeRate = { rate: 1 };
-        let currencySymbol = "₹";
+        const sortOptions = {};
+        if (['title', 'createdAt'].includes(sortBy)) {
+            sortOptions[sortBy] = order === 'desc' ? -1 : 1;
+        } else {
+            sortOptions.title = 1;
+        }
 
-        const country = req.query.country || 'INDIA';
-        const currency = req.query.currency || 'INR';
+        // Fetch exchange rate based on user's selected currency
+        let exchangeRate = 1; // Default to 1 for INR
+        let currencySymbol = "₹"; // Default symbol
 
         if (currency !== 'INR') {
             const foundExchangeRate = await ExchangeRate.findOne({ currency });
             if (foundExchangeRate) {
-                exchangeRate = foundExchangeRate;
-                currencySymbol = exchangeRate.symbol || currency;
+                exchangeRate = foundExchangeRate.rate || 1;
+                currencySymbol = foundExchangeRate.symbol || currency;
             } else {
                 return res.status(400).send({ msg: 'Currency not supported' });
             }
         }
 
         const products = await ProductModel.find(filters)
+            .sort(sortOptions)
             .collation({ locale: 'en', strength: 2 })
             .lean();
 
@@ -527,7 +545,7 @@ productRoute.get('/search/', async (req, res) => {
             product.variants.forEach(variant => {
                 let price = variant.price || 0;
                 let salePrice = variant.salePrice || 0;
-                const marginPercentage = variant.margin / 100 || 0.01;
+                const marginPercentage = variant.margin ? variant.margin / 100 : 0;
 
                 if (country === 'INDIA') {
                     const discount = 12 / 100;
@@ -535,16 +553,16 @@ productRoute.get('/search/', async (req, res) => {
                     salePrice = Number((salePrice * (1 - discount)).toFixed(2));
                 } else if (['BANGLADESH', 'NEPAL'].includes(country)) {
                     const margin = 20 / 100;
-                    price = Number((price + (price * margin)).toFixed(2));
-                    salePrice = Number((salePrice + (salePrice * margin)).toFixed(2));
+                    price = Number((price * (1 + margin)).toFixed(2));
+                    salePrice = Number((salePrice * (1 + margin)).toFixed(2));
                 } else {
-                    price = Number((price + (price * marginPercentage)).toFixed(2));
-                    salePrice = Number((salePrice + (salePrice * marginPercentage)).toFixed(2));
+                    price = Number((price * (1 + marginPercentage)).toFixed(2));
+                    salePrice = Number((salePrice * (1 + marginPercentage)).toFixed(2));
                 }
 
                 // Convert prices to the selected currency
-                price = Number((price * exchangeRate.rate).toFixed(2));
-                salePrice = Number((salePrice * exchangeRate.rate).toFixed(2));
+                price = Number((price * exchangeRate).toFixed(2));
+                salePrice = Number((salePrice * exchangeRate).toFixed(2));
 
                 variant.price = price;
                 variant.salePrice = salePrice;
@@ -562,6 +580,7 @@ productRoute.get('/search/', async (req, res) => {
         res.status(500).send({ msg: 'Internal server error, try again later' });
     }
 });
+
 
 // Route to fetch all products with pagination, filtering, and sorting
 productRoute.get('/admin/search/', verifyToken, async (req, res) => {
@@ -581,6 +600,7 @@ productRoute.get('/admin/search/', verifyToken, async (req, res) => {
                 { title: new RegExp(search, 'i') },
                 { slug: new RegExp(search, 'i') },
                 { treatment: new RegExp(search, 'i') },
+                { manufacturer: new RegExp(search, 'i') },
                 { originCountry: new RegExp(search, 'i') },
                 { tags: new RegExp(search, 'i') },
                 { 'variants.sku': new RegExp(search, 'i') },
@@ -611,32 +631,34 @@ productRoute.get('/admin/search/', verifyToken, async (req, res) => {
 // Route to fetch all products with pagination, filtering, sorting (currency added)
 productRoute.get('/', async (req, res) => {
     try {
+        let { search, sortBy = 'title', order = 'asc', country, currency } = req.query;
+
+        if (search == "" || search == "null" || search == "undefined" || search == null || search == undefined) {
+            search = 'dabur';
+        }
+
+        if (country == "" || country == "null" || country == "undefined" || country == null || country == undefined) {
+            country = 'INDIA';
+        }
+
+        if (currency == "" || currency == "null" || currency == "undefined" || currency == null || currency == undefined) {
+            currency = 'INR';
+        }
+
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
         const filters = { isVisible: true };
-        let {
-            search, minPrice, maxPrice, packSize, isVisible,
-            sortBy = 'title', order = 'asc', country, currency
-        } = req.query;
-
-        if (country == "null" || country == "undefined" || country == null || country == undefined) {
-            country = 'INDIA';
-        }
-
-        if (currency == "null" || currency == "undefined" || currency == null || currency == undefined) {
-            currency = 'INR';
-        }
 
         if (search) {
             filters.$or = [
                 { title: new RegExp(search, 'i') },
                 { slug: new RegExp(search, 'i') },
                 { treatment: new RegExp(search, 'i') },
+                { manufacturer: new RegExp(search, 'i') },
                 { originCountry: new RegExp(search, 'i') },
                 { tags: new RegExp(search, 'i') },
-                { manufacturer: new RegExp(search, 'i') },
                 { 'variants.sku': new RegExp(search, 'i') },
                 { 'variants.packSize': new RegExp(search, 'i') }
             ];
@@ -648,16 +670,11 @@ productRoute.get('/', async (req, res) => {
             }
         }
 
-        if (minPrice) filters['variants.price'] = { ...filters['variants.price'], $gte: parseFloat(minPrice) };
-        if (maxPrice) filters['variants.price'] = { ...filters['variants.price'], $lte: parseFloat(maxPrice) };
-        if (packSize) filters['variants.packSize'] = packSize;
-        if (isVisible) filters.isVisible = isVisible === 'true';
-
         const sortOptions = {};
-        if (['title', 'createdAt', 'lastModified'].includes(sortBy)) {
+        if (['title', 'createdAt'].includes(sortBy)) {
             sortOptions[sortBy] = order === 'desc' ? -1 : 1;
         } else {
-            sortOptions.title = 1; // Default sorting by title
+            sortOptions.title = 1;
         }
 
         const totalProducts = await ProductModel.countDocuments(filters);
@@ -708,9 +725,6 @@ productRoute.get('/', async (req, res) => {
                 price = Number((price * exchangeRate.rate).toFixed(2));
                 salePrice = Number((salePrice * exchangeRate.rate).toFixed(2));
 
-                console.log(price)
-                console.log(salePrice)
-
                 variant.price = price;
                 variant.salePrice = salePrice;
                 variant.currencyCode = currency;
@@ -754,9 +768,9 @@ productRoute.get('/admin/', verifyToken, async (req, res) => {
                 { title: new RegExp(search, 'i') },
                 { slug: new RegExp(search, 'i') },
                 { treatment: new RegExp(search, 'i') },
+                { manufacturer: new RegExp(search, 'i') },
                 { originCountry: new RegExp(search, 'i') },
                 { tags: new RegExp(search, 'i') },
-                { manufacturer: new RegExp(search, 'i') },
                 { 'variants.sku': new RegExp(search, 'i') },
                 { 'variants.packSize': new RegExp(search, 'i') }
             ];
@@ -807,6 +821,16 @@ productRoute.get('/admin/', verifyToken, async (req, res) => {
 // Route to fetch a single product by ID (currency added)
 productRoute.get('/:id', async (req, res) => {
     try {
+        let { country, currency } = req.query;
+
+        if (country == "" || country == "null" || country == "undefined" || country == null || country == undefined) {
+            country = 'INDIA';
+        }
+
+        if (currency == "" || currency == "null" || currency == "undefined" || currency == null || currency == undefined) {
+            currency = 'INR';
+        }
+
         const product = await ProductModel.findById(req.params.id).lean();
         if (!product) {
             return res.status(404).send({ msg: 'Product not found' });
@@ -818,9 +842,6 @@ productRoute.get('/:id', async (req, res) => {
         // Fetch exchange rate based on user's selected currency
         let exchangeRate = { rate: 1 };
         let currencySymbol = "₹";
-
-        const country = req.query.country || 'INDIA';
-        const currency = req.query.currency || 'INR';
 
         if (currency !== 'INR') {
             const foundExchangeRate = await ExchangeRate.findOne({ currency });
