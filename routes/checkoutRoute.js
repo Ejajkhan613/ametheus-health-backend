@@ -294,6 +294,7 @@ router.post('/payment-callback',
 
         try {
             const { order_id, payment_id, signature } = req.body;
+            console.log(req.body);
 
             // Verify payment signature
             if (!verifyPayment(order_id, payment_id, signature)) {
@@ -308,6 +309,7 @@ router.post('/payment-callback',
                 order.status = 'Accepted';
                 await order.save();
             }
+            console.log("ORDER -", order)
 
             // Respond to Razorpay callback
             res.status(200).send('Payment verified successfully');
@@ -443,7 +445,7 @@ router.get('/admin/orders/:id', verifyToken, async (req, res) => {
 router.get('/user/orders', verifyToken, async (req, res) => {
     try {
         const { filter = 'all', sort = 'latest' } = req.query;
-        const userID = req.userDetail.id; // Assumes user ID is attached to req.user by verifyToken
+        const userID = req.userDetail.id;
 
         // Build query based on filter
         let query = { userID };
