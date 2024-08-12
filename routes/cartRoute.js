@@ -133,12 +133,12 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
 
         // Process each item in the batch
         for (const { productID, variantID, quantity } of itemss) {
-            console.log(productID);
             // Fetch the product by productID
             let product = await ProductModel.findById(productID);
             if (!product) {
                 continue;
             }
+            console.log(productID);
 
             // Find the specific variant in the product
             let variant = product.variants.id(variantID);
