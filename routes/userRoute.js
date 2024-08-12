@@ -38,7 +38,7 @@ const Limiter = rateLimit({
 // Get User Account Details
 userRouter.get('/', verifyToken, async (req, res) => {
     try {
-        const { password, role, __v, referralCode, ...userData } = req.userDetail.toObject();
+        const { password, role, __v, referralCode, ...userData } = req.userDetail;
 
         return res.status(200).send({ msg: 'Success', data: userData });
     } catch (error) {

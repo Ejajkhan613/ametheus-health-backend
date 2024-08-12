@@ -477,7 +477,7 @@ productRoute.delete('/:id', verifyToken, async (req, res) => {
 // Route to fetch all products with pagination, filtering, and sorting (currency added)
 productRoute.get('/search/', async (req, res) => {
     try {
-        const { search, sortBy = 'title', order = 'asc', country, currency } = req.query;
+        let { search, sortBy = 'title', order = 'asc', country, currency } = req.query;
 
         if (search == "" || search == "null" || search == "undefined" || search == null || search == undefined) {
             search = 'dabur';
@@ -589,11 +589,11 @@ productRoute.get('/admin/search/', verifyToken, async (req, res) => {
     }
 
     try {
-        const { search = '' } = req.query;
+        let { search = '' } = req.query;
 
-        const filters = {};
+        let filters = {};
 
-        const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
+        let isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
         if (search) {
             filters.$or = [
