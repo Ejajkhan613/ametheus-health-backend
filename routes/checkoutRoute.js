@@ -445,7 +445,7 @@ router.get('/admin/orders/:id', verifyToken, async (req, res) => {
 router.get('/user/orders', verifyToken, async (req, res) => {
     try {
         const { filter = 'all', sort = 'latest' } = req.query;
-        const userID = req.userDetail.id;
+        const userID = req.userDetail._id;
 
         // Build query based on filter
         let query = { userID };
