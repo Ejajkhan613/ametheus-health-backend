@@ -138,13 +138,13 @@ router.post('/batch-loggedin', verifyToken, async (req, res) => {
             if (!product) {
                 continue;
             }
-            console.log(productID);
-
+            
             // Find the specific variant in the product
             let variant = product.variants.id(variantID);
             if (!variant) {
                 continue;
             }
+            console.log(productID);
 
             // Check if the product and variant meet the required conditions
             if (variant.isStockAvailable == false) {
